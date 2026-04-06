@@ -1,6 +1,6 @@
 const { ipcMain, dialog, app } = require('electron');
 const bcrypt = require('bcryptjs');
-const { v4: uuidv4 } = require('uuid');
+const { v4: uuidv4 } = require('uuid'); // eslint-disable-line no-unused-vars
 const path = require('path');
 const fs = require('fs');
 const { getLocalIP } = require('./server');
@@ -712,7 +712,6 @@ function setupIPC(mainWindow, db) {
   ipcMain.handle('orders:updateStatus', async (event, { id, status }) => {
     try {
       if (!isLicenseValid(db)) return { success: false, error: 'Licença expirada. Modo somente leitura.' };
-      const updates = { status, updated_at: 'CURRENT_TIMESTAMP' };
       if (status === 'recebida') {
         db.prepare('UPDATE orders SET status = ?, received_date = date("now"), updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(status, id);
       } else {
@@ -924,8 +923,6 @@ function setupIPC(mainWindow, db) {
 
   ipcMain.handle('backup:create', async (event, backupPath) => {
     try {
-      const { getDbPath } = require('./database');
-      const dbPath = getDbPath();
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const fileName = `gestpro_backup_${timestamp}.db`;
       const destPath = backupPath ? path.join(backupPath, fileName) : path.join(app.getPath('userData'), 'backups', fileName);
