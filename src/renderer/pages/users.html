@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Muhasoft GestPro - Utilizadores</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+  <script src="../js/utils.js"></script>
+  <script>document.write(getSidebarHTML('users'));</script>
+      <div class="main-content">
+        <div class="main-header"><h1>Gestao de Utilizadores</h1><div class="header-spacer"></div></div>
+        <div class="main-body">
+          <div class="toolbar">
+            <div class="ml-auto"><button class="btn btn-primary" onclick="openNewUser()">+ Novo Utilizador</button></div>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <div class="table-container">
+                <table class="data-table">
+                  <thead><tr><th>Utilizador</th><th>Nome Completo</th><th>Perfil</th><th>Email</th><th>Telefone</th><th>Estado</th><th>Acoes</th></tr></thead>
+                  <tbody id="usersTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <div class="modal-overlay" id="userModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="userModalTitle">Novo Utilizador</h2>
+        <button class="modal-close" onclick="hideModal('userModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="userForm">
+          <input type="hidden" id="userId">
+          <div class="form-row">
+            <div class="form-group"><label>Nome de Utilizador *</label><input type="text" id="uUsername" class="form-control" required></div>
+            <div class="form-group"><label>Nome Completo *</label><input type="text" id="uFullName" class="form-control" required></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label id="pwLabel">Palavra-passe *</label><input type="password" id="uPassword" class="form-control"></div>
+            <div class="form-group"><label>Perfil *</label>
+              <select id="uProfile" class="form-control" required>
+                <option value="admin">Administrador</option>
+                <option value="oftalmologista">Oftalmologista</option>
+                <option value="optometrista">Optometrista</option>
+                <option value="rececao">Recepcao</option>
+                <option value="laboratorio">Laboratorio</option>
+                <option value="stock">Stock</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Email</label><input type="email" id="uEmail" class="form-control"></div>
+            <div class="form-group"><label>Telefone</label><input type="text" id="uPhone" class="form-control"></div>
+          </div>
+          <div class="form-group" id="activeGroup" style="display:none;">
+            <label><input type="checkbox" id="uActive" checked> Ativo</label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="hideModal('userModal')">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveUser()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (async () => {
+      const user = await loadUserInfo();
+      if (!user) return;
+      setupNavigation('users');
+      await loadUsers();
+    })();
+
+    async function loadUsers() {
+      try {
+        const data = await window.api.getUsers();
+        const tbody = document.getElementById('usersTable');
+        tbody.innerHTML = data.map(u => `
+          <tr>
+            <td><strong>${escapeHtml(u.username)}</strong></td>
+            <td>${escapeHtml(u.full_name)}</td>
+            <td>${formatProfile(u.profile)}</td>
+            <td>${escapeHtml(u.email || '-')}</td>
+            <td>${escapeHtml(u.phone || '-')}</td>
+            <td>${u.active ? '<span class="badge badge-success">Ativo</span>' : '<span class="badge badge-danger">Inativo</span>'}</td>
+            <td class="actions">
+              <button class="btn btn-sm btn-secondary" onclick="editUser(${u.id})">Editar</button>
+              ${u.username !== 'admin' ? `<button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">Desativar</button>` : ''}
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) { showToast('Erro ao carregar utilizadores', 'error'); }
+    }
+
+    function openNewUser() {
+      document.getElementById('userModalTitle').textContent = 'Novo Utilizador';
+      document.getElementById('userForm').reset();
+      document.getElementById('userId').value = '';
+      document.getElementById('pwLabel').textContent = 'Palavra-passe *';
+      document.getElementById('uPassword').required = true;
+      document.getElementById('activeGroup').style.display = 'none';
+      document.getElementById('uActive').checked = true;
+      showModal('userModal');
+    }
+
+    async function editUser(id) {
+      const users = await window.api.getUsers();
+      const u = users.find(x => x.id === id);
+      if (!u) return;
+      document.getElementById('userModalTitle').textContent = 'Editar Utilizador';
+      document.getElementById('userId').value = u.id;
+      document.getElementById('uUsername').value = u.username;
+      document.getElementById('uFullName').value = u.full_name;
+      document.getElementById('uProfile').value = u.profile;
+      document.getElementById('uEmail').value = u.email || '';
+      document.getElementById('uPhone').value = u.phone || '';
+      document.getElementById('uPassword').value = '';
+      document.getElementById('pwLabel').textContent = 'Nova Palavra-passe (deixar vazio para manter)';
+      document.getElementById('uPassword').required = false;
+      document.getElementById('activeGroup').style.display = 'block';
+      document.getElementById('uActive').checked = !!u.active;
+      showModal('userModal');
+    }
+
+    async function saveUser() {
+      const id = document.getElementById('userId').value;
+      const data = {
+        username: document.getElementById('uUsername').value,
+        full_name: document.getElementById('uFullName').value,
+        profile: document.getElementById('uProfile').value,
+        email: document.getElementById('uEmail').value || null,
+        phone: document.getElementById('uPhone').value || null,
+        active: document.getElementById('uActive').checked
+      };
+      const pw = document.getElementById('uPassword').value;
+      if (pw) data.password = pw;
+
+      if (!data.username || !data.full_name) { showToast('Preencha os campos obrigatorios', 'error'); return; }
+      if (!id && !pw) { showToast('Palavra-passe e obrigatoria', 'error'); return; }
+
+      let result;
+      if (id) { data.id = parseInt(id); result = await window.api.updateUser(data); }
+      else { result = await window.api.createUser(data); }
+
+      if (result.success) { showToast(id ? 'Utilizador atualizado' : 'Utilizador criado'); hideModal('userModal'); await loadUsers(); }
+      else { showToast(result.error, 'error'); }
+    }
+
+    async function deleteUser(id) {
+      if (!confirm('Desativar este utilizador?')) return;
+      const result = await window.api.deleteUser(id);
+      if (result.success) { showToast('Utilizador desativado'); await loadUsers(); }
+      else { showToast(result.error, 'error'); }
+    }
+  </script>
+</body>
+</html>

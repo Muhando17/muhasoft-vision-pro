@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Muhasoft GestPro - Consultas</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+  <script src="../js/utils.js"></script>
+  <script>document.write(getSidebarHTML('consultations'));</script>
+      <div class="main-content">
+        <div class="main-header">
+          <h1>Consultas</h1>
+          <div class="header-spacer"></div>
+        </div>
+        <div class="main-body">
+          <div class="toolbar">
+            <div class="filter-group">
+              <label>Tipo:</label>
+              <select id="filterType" class="form-control" style="width:160px;">
+                <option value="">Todos</option>
+                <option value="oftalmologia">Oftalmologia</option>
+                <option value="optometria">Optometria</option>
+              </select>
+            </div>
+            <div class="ml-auto">
+              <button class="btn btn-primary" onclick="openNewConsultation()">+ Nova Consulta</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Paciente</th>
+                      <th>Tipo</th>
+                      <th>Profissional</th>
+                      <th>Diagnostico</th>
+                      <th>Estado</th>
+                      <th>Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="consultationsTable"></tbody>
+                </table>
+              </div>
+              <div id="emptyState" class="empty-state hidden">
+                <div class="empty-state-icon">&#x1fa7a;</div>
+                <h3>Sem consultas</h3>
+                <p>Crie uma nova consulta</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <!-- Consultation Modal -->
+  <div class="modal-overlay" id="consultationModal">
+    <div class="modal modal-xl">
+      <div class="modal-header">
+        <h2 id="consultationModalTitle">Nova Consulta</h2>
+        <button class="modal-close" onclick="hideModal('consultationModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="consultationForm">
+          <input type="hidden" id="cId">
+
+          <div class="form-section">
+            <h3>Informacoes Gerais</h3>
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Paciente *</label>
+                <select id="cPatient" class="form-control" required></select>
+              </div>
+              <div class="form-group">
+                <label>Tipo *</label>
+                <select id="cType" class="form-control" required onchange="toggleOptometryFields()">
+                  <option value="oftalmologia">Oftalmologia</option>
+                  <option value="optometria">Optometria</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Consulta Vinculada</label>
+                <select id="cAppointment" class="form-control"><option value="">Nenhuma</option></select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Motivo e Historia</h3>
+            <div class="form-group">
+              <label>Motivo da Consulta</label>
+              <textarea id="cChiefComplaint" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Historia Medica</label>
+                <textarea id="cMedicalHistory" class="form-control" rows="2"></textarea>
+              </div>
+              <div class="form-group">
+                <label>Historia Familiar</label>
+                <textarea id="cFamilyHistory" class="form-control" rows="2"></textarea>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Medicacao Atual</label>
+                <textarea id="cCurrentMedications" class="form-control" rows="2"></textarea>
+              </div>
+              <div class="form-group">
+                <label>Alergias</label>
+                <textarea id="cAllergies" class="form-control" rows="2"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Optometry Anamnesis -->
+          <div class="form-section" id="optometrySection" style="display:none;">
+            <h3>Anamnese Optometrica (Obrigatoria)</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Sintomas Visuais *</label>
+                <textarea id="cVisualSymptoms" class="form-control" rows="2"></textarea>
+              </div>
+              <div class="form-group">
+                <label>Historia Ocular</label>
+                <textarea id="cOcularHistory" class="form-control" rows="2"></textarea>
+              </div>
+            </div>
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Ocupacao</label>
+                <input type="text" id="cOccupation" class="form-control">
+              </div>
+              <div class="form-group">
+                <label>Tempo de Ecra (h/dia)</label>
+                <input type="text" id="cScreenTime" class="form-control">
+              </div>
+              <div class="form-group">
+                <label>Dist. de Leitura</label>
+                <input type="text" id="cReadingDistance" class="form-control">
+              </div>
+            </div>
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Conduz?</label>
+                <select id="cDriving" class="form-control">
+                  <option value="">Selecionar</option>
+                  <option value="Sim">Sim</option>
+                  <option value="Nao">Nao</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Desportos</label>
+                <input type="text" id="cSports" class="form-control">
+              </div>
+              <div class="form-group">
+                <label>Oculos Atuais</label>
+                <input type="text" id="cCurrentGlasses" class="form-control">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Data Ultimo Exame</label>
+                <input type="text" id="cLastExamDate" class="form-control">
+              </div>
+              <div class="form-group">
+                <label>Satisfacao c/ Oculos Atuais</label>
+                <input type="text" id="cSatisfaction" class="form-control">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Acuidade Visual</h3>
+            <div class="form-row-4">
+              <div class="form-group">
+                <label>AV OD s/c</label>
+                <input type="text" id="cVaOdSc" class="form-control" placeholder="Ex: 20/20">
+              </div>
+              <div class="form-group">
+                <label>AV OD c/c</label>
+                <input type="text" id="cVaOdCc" class="form-control" placeholder="Ex: 20/20">
+              </div>
+              <div class="form-group">
+                <label>AV OE s/c</label>
+                <input type="text" id="cVaOeSc" class="form-control" placeholder="Ex: 20/20">
+              </div>
+              <div class="form-group">
+                <label>AV OE c/c</label>
+                <input type="text" id="cVaOeCc" class="form-control" placeholder="Ex: 20/20">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Auto-Refracometria</h3>
+            <div class="eye-grid">
+              <div></div><label>ESF</label><label>CIL</label><label>EIXO</label><div></div><div></div>
+              <div class="eye-label">OD</div>
+              <input type="text" id="cAutoOdEsf" class="form-control">
+              <input type="text" id="cAutoOdCil" class="form-control">
+              <input type="text" id="cAutoOdEixo" class="form-control">
+              <div></div><div></div>
+              <div class="eye-label">OE</div>
+              <input type="text" id="cAutoOeEsf" class="form-control">
+              <input type="text" id="cAutoOeCil" class="form-control">
+              <input type="text" id="cAutoOeEixo" class="form-control">
+              <div></div><div></div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Refracao Final</h3>
+            <div class="eye-grid">
+              <div></div><label>ESF</label><label>CIL</label><label>EIXO</label><label>ADD</label><label>AV</label>
+              <div class="eye-label">OD</div>
+              <input type="text" id="cRefOdEsf" class="form-control">
+              <input type="text" id="cRefOdCil" class="form-control">
+              <input type="text" id="cRefOdEixo" class="form-control">
+              <input type="text" id="cRefOdAdd" class="form-control">
+              <input type="text" id="cRefOdAv" class="form-control">
+              <div class="eye-label">OE</div>
+              <input type="text" id="cRefOeEsf" class="form-control">
+              <input type="text" id="cRefOeCil" class="form-control">
+              <input type="text" id="cRefOeEixo" class="form-control">
+              <input type="text" id="cRefOeAdd" class="form-control">
+              <input type="text" id="cRefOeAv" class="form-control">
+            </div>
+            <div class="form-row mt-2" style="max-width:200px;">
+              <div class="form-group">
+                <label>DP</label>
+                <input type="text" id="cRefDp" class="form-control">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Tonometria</h3>
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>PIO OD (mmHg)</label>
+                <input type="text" id="cPioOd" class="form-control">
+              </div>
+              <div class="form-group">
+                <label>PIO OE (mmHg)</label>
+                <input type="text" id="cPioOe" class="form-control">
+              </div>
+              <div class="form-group">
+                <label>Metodo</label>
+                <input type="text" id="cPioMethod" class="form-control" placeholder="Ex: Goldmann">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Biomicroscopia</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>OD</label>
+                <textarea id="cBioOd" class="form-control" rows="2"></textarea>
+              </div>
+              <div class="form-group">
+                <label>OE</label>
+                <textarea id="cBioOe" class="form-control" rows="2"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Fundoscopia</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>OD</label>
+                <textarea id="cFundOd" class="form-control" rows="2"></textarea>
+              </div>
+              <div class="form-group">
+                <label>OE</label>
+                <textarea id="cFundOe" class="form-control" rows="2"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Optometry extra fields -->
+          <div id="optometryExtraSection" style="display:none;">
+            <div class="form-section">
+              <h3>Cover Test</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Longe</label>
+                  <input type="text" id="cCoverTestDistance" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label>Perto</label>
+                  <input type="text" id="cCoverTestNear" class="form-control">
+                </div>
+              </div>
+            </div>
+            <div class="form-section">
+              <h3>Convergencia e Acomodacao</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Ponto Proximo de Convergencia</label>
+                  <input type="text" id="cConvergenceNear" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label>Acomodacao</label>
+                  <input type="text" id="cAccommodation" class="form-control">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Diagnostico e Plano</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Diagnostico</label>
+                <textarea id="cDiagnosis" class="form-control" rows="2"></textarea>
+              </div>
+              <div class="form-group">
+                <label>Codigo CID</label>
+                <input type="text" id="cDiagnosisCode" class="form-control">
+              </div>
+            </div>
+            <div class="form-group" id="functionalDiagGroup" style="display:none;">
+              <label>Diagnostico Funcional</label>
+              <textarea id="cFunctionalDiagnosis" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Plano de Tratamento</label>
+              <textarea id="cTreatmentPlan" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Observacoes</label>
+                <textarea id="cObservations" class="form-control" rows="2"></textarea>
+              </div>
+              <div class="form-group">
+                <label>Proxima Revisao</label>
+                <input type="date" id="cNextRevision" class="form-control">
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="hideModal('consultationModal')">Cancelar</button>
+        <button class="btn btn-success" onclick="saveAndPrescription()">Guardar e Receitar</button>
+        <button class="btn btn-primary" onclick="saveConsultation()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+
+    (async () => {
+      currentUser = await loadUserInfo();
+      if (!currentUser) return;
+      setupNavigation('consultations');
+      await loadConsultations();
+    })();
+
+    document.getElementById('filterType').addEventListener('change', loadConsultations);
+
+    function toggleOptometryFields() {
+      const type = document.getElementById('cType').value;
+      const isOpto = type === 'optometria';
+      document.getElementById('optometrySection').style.display = isOpto ? 'block' : 'none';
+      document.getElementById('optometryExtraSection').style.display = isOpto ? 'block' : 'none';
+      document.getElementById('functionalDiagGroup').style.display = isOpto ? 'block' : 'none';
+    }
+
+    async function loadConsultations() {
+      try {
+        const filters = {};
+        const type = document.getElementById('filterType').value;
+        if (type) filters.type = type;
+        const consultations = await window.api.getConsultations(filters);
+        renderConsultations(consultations);
+      } catch (e) { showToast('Erro ao carregar consultas', 'error'); }
+    }
+
+    function renderConsultations(data) {
+      const tbody = document.getElementById('consultationsTable');
+      const empty = document.getElementById('emptyState');
+      if (!data || data.length === 0) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
+      empty.classList.add('hidden');
+      tbody.innerHTML = data.map(c => `
+        <tr>
+          <td>${formatDateTime(c.consultation_date)}</td>
+          <td>${escapeHtml(c.patient_name)}</td>
+          <td>${c.type === 'oftalmologia' ? '<span class="badge badge-info">Oftalmologia</span>' : '<span class="badge badge-purple">Optometria</span>'}</td>
+          <td>${escapeHtml(c.professional_name)}</td>
+          <td>${escapeHtml(c.diagnosis || '-')}</td>
+          <td>${formatStatus(c.status)}</td>
+          <td class="actions">
+            <button class="btn btn-sm btn-secondary" onclick="viewConsultation(${c.id})">Ver</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function openNewConsultation() {
+      document.getElementById('consultationModalTitle').textContent = 'Nova Consulta';
+      document.getElementById('consultationForm').reset();
+      document.getElementById('cId').value = '';
+      toggleOptometryFields();
+      const patients = await window.api.getPatients('');
+      document.getElementById('cPatient').innerHTML = '<option value="">Selecionar paciente</option>' +
+        patients.map(p => `<option value="${p.id}">${p.full_name} (${p.code})</option>`).join('');
+      const appointments = await window.api.getAppointments({ date: today(), status: 'agendada' });
+      document.getElementById('cAppointment').innerHTML = '<option value="">Nenhuma</option>' +
+        appointments.map(a => `<option value="${a.id}">${a.appointment_time} - ${a.patient_name}</option>`).join('');
+      showModal('consultationModal');
+    }
+
+    async function viewConsultation(id) {
+      const c = await window.api.getConsultation(id);
+      if (!c) return;
+      document.getElementById('consultationModalTitle').textContent = `Consulta - ${c.patient_name}`;
+      document.getElementById('cId').value = c.id;
+
+      const patients = await window.api.getPatients('');
+      document.getElementById('cPatient').innerHTML = patients.map(p => `<option value="${p.id}" ${p.id === c.patient_id ? 'selected' : ''}>${p.full_name}</option>`).join('');
+      document.getElementById('cType').value = c.type;
+      toggleOptometryFields();
+
+      // Populate all fields
+      const fields = {
+        cChiefComplaint: c.chief_complaint, cMedicalHistory: c.medical_history,
+        cFamilyHistory: c.family_history, cCurrentMedications: c.current_medications,
+        cAllergies: c.allergies, cVaOdSc: c.va_od_sc, cVaOdCc: c.va_od_cc,
+        cVaOeSc: c.va_oe_sc, cVaOeCc: c.va_oe_cc, cAutoOdEsf: c.auto_od_esf,
+        cAutoOdCil: c.auto_od_cil, cAutoOdEixo: c.auto_od_eixo, cAutoOeEsf: c.auto_oe_esf,
+        cAutoOeCil: c.auto_oe_cil, cAutoOeEixo: c.auto_oe_eixo, cRefOdEsf: c.ref_od_esf,
+        cRefOdCil: c.ref_od_cil, cRefOdEixo: c.ref_od_eixo, cRefOdAdd: c.ref_od_add,
+        cRefOdAv: c.ref_od_av, cRefOeEsf: c.ref_oe_esf, cRefOeCil: c.ref_oe_cil,
+        cRefOeEixo: c.ref_oe_eixo, cRefOeAdd: c.ref_oe_add, cRefOeAv: c.ref_oe_av,
+        cRefDp: c.ref_dp, cPioOd: c.pio_od, cPioOe: c.pio_oe, cPioMethod: c.pio_method,
+        cBioOd: c.biomicroscopy_od, cBioOe: c.biomicroscopy_oe,
+        cFundOd: c.fundoscopy_od, cFundOe: c.fundoscopy_oe,
+        cDiagnosis: c.diagnosis, cDiagnosisCode: c.diagnosis_code,
+        cFunctionalDiagnosis: c.functional_diagnosis, cTreatmentPlan: c.treatment_plan,
+        cObservations: c.observations, cNextRevision: c.next_revision_date,
+        cVisualSymptoms: c.anamnesis_visual_symptoms, cOcularHistory: c.anamnesis_ocular_history,
+        cOccupation: c.anamnesis_occupation, cScreenTime: c.anamnesis_screen_time,
+        cReadingDistance: c.anamnesis_reading_distance, cDriving: c.anamnesis_driving,
+        cSports: c.anamnesis_sports, cCurrentGlasses: c.anamnesis_current_glasses,
+        cLastExamDate: c.anamnesis_last_exam_date, cSatisfaction: c.anamnesis_satisfaction,
+        cCoverTestDistance: c.cover_test_distance, cCoverTestNear: c.cover_test_near,
+        cConvergenceNear: c.convergence_near_point, cAccommodation: c.accommodation
+      };
+      Object.entries(fields).forEach(([id, val]) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val || '';
+      });
+      showModal('consultationModal');
+    }
+
+    function getConsultationData() {
+      const data = {
+        patient_id: parseInt(document.getElementById('cPatient').value),
+        professional_id: currentUser.id,
+        type: document.getElementById('cType').value,
+        chief_complaint: document.getElementById('cChiefComplaint').value || null,
+        medical_history: document.getElementById('cMedicalHistory').value || null,
+        family_history: document.getElementById('cFamilyHistory').value || null,
+        current_medications: document.getElementById('cCurrentMedications').value || null,
+        allergies: document.getElementById('cAllergies').value || null,
+        va_od_sc: document.getElementById('cVaOdSc').value || null,
+        va_od_cc: document.getElementById('cVaOdCc').value || null,
+        va_oe_sc: document.getElementById('cVaOeSc').value || null,
+        va_oe_cc: document.getElementById('cVaOeCc').value || null,
+        auto_od_esf: document.getElementById('cAutoOdEsf').value || null,
+        auto_od_cil: document.getElementById('cAutoOdCil').value || null,
+        auto_od_eixo: document.getElementById('cAutoOdEixo').value || null,
+        auto_oe_esf: document.getElementById('cAutoOeEsf').value || null,
+        auto_oe_cil: document.getElementById('cAutoOeCil').value || null,
+        auto_oe_eixo: document.getElementById('cAutoOeEixo').value || null,
+        ref_od_esf: document.getElementById('cRefOdEsf').value || null,
+        ref_od_cil: document.getElementById('cRefOdCil').value || null,
+        ref_od_eixo: document.getElementById('cRefOdEixo').value || null,
+        ref_od_add: document.getElementById('cRefOdAdd').value || null,
+        ref_od_av: document.getElementById('cRefOdAv').value || null,
+        ref_oe_esf: document.getElementById('cRefOeEsf').value || null,
+        ref_oe_cil: document.getElementById('cRefOeCil').value || null,
+        ref_oe_eixo: document.getElementById('cRefOeEixo').value || null,
+        ref_oe_add: document.getElementById('cRefOeAdd').value || null,
+        ref_oe_av: document.getElementById('cRefOeAv').value || null,
+        ref_dp: document.getElementById('cRefDp').value || null,
+        pio_od: document.getElementById('cPioOd').value || null,
+        pio_oe: document.getElementById('cPioOe').value || null,
+        pio_method: document.getElementById('cPioMethod').value || null,
+        biomicroscopy_od: document.getElementById('cBioOd').value || null,
+        biomicroscopy_oe: document.getElementById('cBioOe').value || null,
+        fundoscopy_od: document.getElementById('cFundOd').value || null,
+        fundoscopy_oe: document.getElementById('cFundOe').value || null,
+        diagnosis: document.getElementById('cDiagnosis').value || null,
+        diagnosis_code: document.getElementById('cDiagnosisCode').value || null,
+        treatment_plan: document.getElementById('cTreatmentPlan').value || null,
+        observations: document.getElementById('cObservations').value || null,
+        next_revision_date: document.getElementById('cNextRevision').value || null
+      };
+
+      // Optometry fields
+      if (data.type === 'optometria') {
+        Object.assign(data, {
+          anamnesis_visual_symptoms: document.getElementById('cVisualSymptoms').value || null,
+          anamnesis_ocular_history: document.getElementById('cOcularHistory').value || null,
+          anamnesis_occupation: document.getElementById('cOccupation').value || null,
+          anamnesis_screen_time: document.getElementById('cScreenTime').value || null,
+          anamnesis_reading_distance: document.getElementById('cReadingDistance').value || null,
+          anamnesis_driving: document.getElementById('cDriving').value || null,
+          anamnesis_sports: document.getElementById('cSports').value || null,
+          anamnesis_current_glasses: document.getElementById('cCurrentGlasses').value || null,
+          anamnesis_last_exam_date: document.getElementById('cLastExamDate').value || null,
+          anamnesis_satisfaction: document.getElementById('cSatisfaction').value || null,
+          functional_diagnosis: document.getElementById('cFunctionalDiagnosis').value || null,
+          cover_test_distance: document.getElementById('cCoverTestDistance').value || null,
+          cover_test_near: document.getElementById('cCoverTestNear').value || null,
+          convergence_near_point: document.getElementById('cConvergenceNear').value || null,
+          accommodation: document.getElementById('cAccommodation').value || null
+        });
+      }
+
+      const aptId = document.getElementById('cAppointment').value;
+      if (aptId) data.appointment_id = parseInt(aptId);
+
+      return data;
+    }
+
+    async function saveConsultation() {
+      const data = getConsultationData();
+      if (!data.patient_id) { showToast('Selecione um paciente', 'error'); return; }
+
+      const id = document.getElementById('cId').value;
+      let result;
+      if (id) { data.id = parseInt(id); result = await window.api.updateConsultation(data); }
+      else { data.status = 'concluida'; result = await window.api.createConsultation(data); }
+
+      if (result.success) {
+        showToast(id ? 'Consulta atualizada' : 'Consulta criada');
+        hideModal('consultationModal');
+        await loadConsultations();
+      } else { showToast(result.error, 'error'); }
+    }
+
+    async function saveAndPrescription() {
+      const data = getConsultationData();
+      if (!data.patient_id) { showToast('Selecione um paciente', 'error'); return; }
+
+      data.status = 'concluida';
+      const id = document.getElementById('cId').value;
+      let result;
+      if (id) { data.id = parseInt(id); result = await window.api.updateConsultation(data); }
+      else { result = await window.api.createConsultation(data); }
+
+      if (result.success) {
+        showToast('Consulta guardada. A abrir receita...');
+        hideModal('consultationModal');
+        // Navigate to prescriptions page with consultation data
+        window.api.navigate('prescriptions.html');
+      } else { showToast(result.error, 'error'); }
+    }
+  </script>
+</body>
+</html>

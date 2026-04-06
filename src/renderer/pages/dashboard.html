@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Muhasoft GestPro - Dashboard</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+  <script src="../js/utils.js"></script>
+  <script>document.write(getSidebarHTML('dashboard'));</script>
+      <div class="main-content">
+        <div class="main-header">
+          <h1>Dashboard</h1>
+          <div class="header-spacer"></div>
+          <div class="header-info" id="headerDate"></div>
+        </div>
+        <div class="main-body">
+          <div class="stats-grid" id="statsGrid"></div>
+          <div class="dashboard-grid">
+            <div class="card">
+              <div class="card-header"><h2>Alertas</h2></div>
+              <div class="card-body">
+                <ul class="alert-list" id="alertList">
+                  <li class="empty-state"><p>Sem alertas</p></li>
+                </ul>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><h2>Consultas de Hoje</h2></div>
+              <div class="card-body">
+                <div id="todayAppointments">
+                  <div class="empty-state"><p>Sem consultas agendadas para hoje</p></div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><h2>Vendas Recentes</h2></div>
+              <div class="card-body">
+                <div id="recentSales">
+                  <div class="empty-state"><p>Sem vendas recentes</p></div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><h2>Laboratorio</h2></div>
+              <div class="card-body">
+                <div id="labStatus">
+                  <div class="empty-state"><p>Sem ordens de laboratorio</p></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <script>
+    (async () => {
+      const user = await loadUserInfo();
+      if (!user) return;
+      setupNavigation('dashboard');
+
+      document.getElementById('headerDate').textContent = new Date().toLocaleDateString('pt-PT', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+
+      // Load stats
+      try {
+        const stats = await window.api.getDashboardStats();
+        document.getElementById('statsGrid').innerHTML = `
+          <div class="stat-card">
+            <div class="stat-icon blue">&#x1f4c5;</div>
+            <div class="stat-info"><h3>${stats.todayAppointments}</h3><p>Consultas Hoje</p></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green">&#x1f465;</div>
+            <div class="stat-info"><h3>${stats.totalPatients}</h3><p>Total Pacientes</p></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon orange">&#x1f4b0;</div>
+            <div class="stat-info"><h3>${formatCurrency(stats.monthRevenue)}</h3><p>Receita do Mes</p></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon red">&#x1f4e6;</div>
+            <div class="stat-info"><h3>${stats.lowStock}</h3><p>Stock Baixo</p></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon purple">&#x1f3ed;</div>
+            <div class="stat-info"><h3>${stats.pendingLab}</h3><p>Lab. Pendente</p></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon blue">&#x1f4e5;</div>
+            <div class="stat-info"><h3>${stats.pendingOrders}</h3><p>Encomendas</p></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green">&#x1fa7a;</div>
+            <div class="stat-info"><h3>${stats.todayConsultations || 0}</h3><p>Consultas Realizadas</p></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon orange">&#x1f514;</div>
+            <div class="stat-info"><h3>${stats.upcomingRevisions}</h3><p>Revisoes Proximas</p></div>
+          </div>
+        `;
+      } catch (e) { console.error('Stats error:', e); }
+
+      // Load alerts
+      try {
+        const alerts = await window.api.getDashboardAlerts();
+        if (alerts && alerts.length > 0) {
+          document.getElementById('alertList').innerHTML = alerts.map(a => `
+            <li class="alert-item">
+              <span class="alert-badge ${a.severity}">${a.severity === 'critical' ? 'Critico' : a.severity === 'warning' ? 'Aviso' : 'Info'}</span>
+              <span>${escapeHtml(a.message)}</span>
+            </li>
+          `).join('');
+        }
+      } catch (e) { console.error('Alerts error:', e); }
+
+      // Load today appointments
+      try {
+        const appointments = await window.api.getAppointments({ date: today() });
+        if (appointments && appointments.length > 0) {
+          document.getElementById('todayAppointments').innerHTML = `
+            <table class="data-table">
+              <thead><tr><th>Hora</th><th>Paciente</th><th>Tipo</th><th>Profissional</th><th>Estado</th></tr></thead>
+              <tbody>${appointments.map(a => `
+                <tr>
+                  <td>${a.appointment_time}</td>
+                  <td>${escapeHtml(a.patient_name)}</td>
+                  <td>${escapeHtml(a.type)}</td>
+                  <td>${escapeHtml(a.professional_name || '-')}</td>
+                  <td>${formatStatus(a.status)}</td>
+                </tr>
+              `).join('')}</tbody>
+            </table>
+          `;
+        }
+      } catch (e) { console.error('Appointments error:', e); }
+
+      // Load recent sales
+      try {
+        const sales = await window.api.getSales({});
+        if (sales && sales.length > 0) {
+          document.getElementById('recentSales').innerHTML = `
+            <table class="data-table">
+              <thead><tr><th>Codigo</th><th>Paciente</th><th>Total</th><th>Estado</th></tr></thead>
+              <tbody>${sales.slice(0, 5).map(s => `
+                <tr>
+                  <td>${escapeHtml(s.code)}</td>
+                  <td>${escapeHtml(s.patient_name)}</td>
+                  <td>${formatCurrency(s.total)}</td>
+                  <td>${formatStatus(s.status)}</td>
+                </tr>
+              `).join('')}</tbody>
+            </table>
+          `;
+        }
+      } catch (e) { console.error('Sales error:', e); }
+
+      // Load lab status
+      try {
+        const labOrders = await window.api.getLabOrders({});
+        if (labOrders && labOrders.length > 0) {
+          document.getElementById('labStatus').innerHTML = `
+            <table class="data-table">
+              <thead><tr><th>Codigo</th><th>Paciente</th><th>Prioridade</th><th>Estado</th></tr></thead>
+              <tbody>${labOrders.slice(0, 5).map(l => `
+                <tr>
+                  <td>${escapeHtml(l.code)}</td>
+                  <td>${escapeHtml(l.patient_name)}</td>
+                  <td>${formatStatus(l.priority)}</td>
+                  <td>${formatStatus(l.status)}</td>
+                </tr>
+              `).join('')}</tbody>
+            </table>
+          `;
+        }
+      } catch (e) { console.error('Lab error:', e); }
+    })();
+  </script>
+</body>
+</html>

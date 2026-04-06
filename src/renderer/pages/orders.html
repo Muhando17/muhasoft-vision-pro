@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Muhasoft GestPro - Encomendas</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+  <script src="../js/utils.js"></script>
+  <script>document.write(getSidebarHTML('orders'));</script>
+      <div class="main-content">
+        <div class="main-header"><h1>Encomendas</h1><div class="header-spacer"></div></div>
+        <div class="main-body">
+          <div class="toolbar">
+            <div class="filter-group">
+              <label>Estado:</label>
+              <select id="filterStatus" class="form-control" style="width:150px;">
+                <option value="">Todos</option>
+                <option value="pendente">Pendente</option>
+                <option value="encomendada">Encomendada</option>
+                <option value="recebida">Recebida</option>
+                <option value="cancelada">Cancelada</option>
+              </select>
+            </div>
+            <div class="ml-auto"><button class="btn btn-primary" onclick="openNewOrder()">+ Nova Encomenda</button></div>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <div class="table-container">
+                <table class="data-table">
+                  <thead><tr><th>Codigo</th><th>Fornecedor</th><th>Descricao</th><th>Paciente</th><th>Total</th><th>Data Prev.</th><th>Estado</th><th>Acoes</th></tr></thead>
+                  <tbody id="ordersTable"></tbody>
+                </table>
+              </div>
+              <div id="emptyState" class="empty-state hidden">
+                <div class="empty-state-icon">&#x1f4e5;</div><h3>Sem encomendas</h3><p>Crie uma nova encomenda</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <div class="modal-overlay" id="orderModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="orderModalTitle">Nova Encomenda</h2>
+        <button class="modal-close" onclick="hideModal('orderModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="orderForm">
+          <input type="hidden" id="ordId">
+          <div class="form-row">
+            <div class="form-group"><label>Fornecedor *</label><input type="text" id="ordSupplier" class="form-control" required></div>
+            <div class="form-group"><label>Paciente</label><select id="ordPatient" class="form-control"><option value="">Nenhum</option></select></div>
+          </div>
+          <div class="form-group"><label>Descricao *</label><textarea id="ordDescription" class="form-control" rows="2" required></textarea></div>
+          <div class="form-row-3">
+            <div class="form-group"><label>Quantidade</label><input type="number" id="ordQty" class="form-control" value="1" min="1" onchange="calcOrderTotal()"></div>
+            <div class="form-group"><label>Preco Unit.</label><input type="number" id="ordPrice" class="form-control" step="0.01" value="0" onchange="calcOrderTotal()"></div>
+            <div class="form-group"><label>Total</label><input type="number" id="ordTotal" class="form-control" readonly></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Data Prevista</label><input type="date" id="ordExpectedDate" class="form-control"></div>
+            <div class="form-group"><label>Notas</label><textarea id="ordNotes" class="form-control" rows="2"></textarea></div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="hideModal('orderModal')">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveOrder()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (async () => {
+      const user = await loadUserInfo();
+      if (!user) return;
+      setupNavigation('orders');
+      await loadOrders();
+    })();
+
+    document.getElementById('filterStatus').addEventListener('change', loadOrders);
+
+    function calcOrderTotal() {
+      const qty = parseFloat(document.getElementById('ordQty').value) || 0;
+      const price = parseFloat(document.getElementById('ordPrice').value) || 0;
+      document.getElementById('ordTotal').value = (qty * price).toFixed(2);
+    }
+
+    async function loadOrders() {
+      try {
+        const filters = {};
+        const status = document.getElementById('filterStatus').value;
+        if (status) filters.status = status;
+        const data = await window.api.getOrders(filters);
+        renderOrders(data);
+      } catch (e) { showToast('Erro ao carregar encomendas', 'error'); }
+    }
+
+    function renderOrders(data) {
+      const tbody = document.getElementById('ordersTable');
+      const empty = document.getElementById('emptyState');
+      if (!data || data.length === 0) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
+      empty.classList.add('hidden');
+      tbody.innerHTML = data.map(o => `
+        <tr>
+          <td><strong>${escapeHtml(o.code)}</strong></td>
+          <td>${escapeHtml(o.supplier)}</td>
+          <td>${escapeHtml(o.description)}</td>
+          <td>${escapeHtml(o.patient_name || '-')}</td>
+          <td>${formatCurrency(o.total)}</td>
+          <td>${formatDate(o.expected_date)}</td>
+          <td>${formatStatus(o.status)}</td>
+          <td class="actions">
+            <button class="btn btn-sm btn-secondary" onclick="editOrder(${o.id})">Editar</button>
+            ${o.status === 'pendente' ? `<button class="btn btn-sm btn-info" onclick="changeOrderStatus(${o.id},'encomendada')">Encomendar</button>` : ''}
+            ${o.status === 'encomendada' ? `<button class="btn btn-sm btn-success" onclick="changeOrderStatus(${o.id},'recebida')">Recebida</button>` : ''}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function openNewOrder() {
+      document.getElementById('orderModalTitle').textContent = 'Nova Encomenda';
+      document.getElementById('orderForm').reset();
+      document.getElementById('ordId').value = '';
+      const patients = await window.api.getPatients('');
+      document.getElementById('ordPatient').innerHTML = '<option value="">Nenhum</option>' +
+        patients.map(p => `<option value="${p.id}">${p.full_name}</option>`).join('');
+      showModal('orderModal');
+    }
+
+    async function editOrder(id) {
+      const o = await window.api.getOrder(id);
+      if (!o) return;
+      await openNewOrder();
+      document.getElementById('orderModalTitle').textContent = 'Editar Encomenda';
+      document.getElementById('ordId').value = o.id;
+      document.getElementById('ordSupplier').value = o.supplier;
+      document.getElementById('ordPatient').value = o.patient_id || '';
+      document.getElementById('ordDescription').value = o.description;
+      document.getElementById('ordQty').value = o.quantity;
+      document.getElementById('ordPrice').value = o.unit_price;
+      document.getElementById('ordTotal').value = o.total;
+      document.getElementById('ordExpectedDate').value = o.expected_date || '';
+      document.getElementById('ordNotes').value = o.notes || '';
+    }
+
+    async function saveOrder() {
+      const id = document.getElementById('ordId').value;
+      const data = {
+        supplier: document.getElementById('ordSupplier').value,
+        patient_id: document.getElementById('ordPatient').value ? parseInt(document.getElementById('ordPatient').value) : null,
+        description: document.getElementById('ordDescription').value,
+        quantity: parseInt(document.getElementById('ordQty').value) || 1,
+        unit_price: parseFloat(document.getElementById('ordPrice').value) || 0,
+        total: parseFloat(document.getElementById('ordTotal').value) || 0,
+        expected_date: document.getElementById('ordExpectedDate').value || null,
+        notes: document.getElementById('ordNotes').value || null
+      };
+      if (!data.supplier || !data.description) { showToast('Preencha os campos obrigatorios', 'error'); return; }
+
+      let result;
+      if (id) { data.id = parseInt(id); result = await window.api.updateOrder(data); }
+      else { result = await window.api.createOrder(data); }
+
+      if (result.success) { showToast(id ? 'Encomenda atualizada' : 'Encomenda criada'); hideModal('orderModal'); await loadOrders(); }
+      else { showToast(result.error, 'error'); }
+    }
+
+    async function changeOrderStatus(id, status) {
+      const result = await window.api.updateOrderStatus({ id, status });
+      if (result.success) { showToast('Estado atualizado'); await loadOrders(); }
+      else { showToast(result.error, 'error'); }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Muhasoft GestPro - Auditoria</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+  <script src="../js/utils.js"></script>
+  <script>document.write(getSidebarHTML('audit'));</script>
+      <div class="main-content">
+        <div class="main-header"><h1>Registo de Auditoria</h1><div class="header-spacer"></div></div>
+        <div class="main-body">
+          <div class="toolbar">
+            <div class="filter-group">
+              <label>Modulo:</label>
+              <select id="filterModule" class="form-control" style="width:150px;">
+                <option value="">Todos</option>
+                <option value="auth">Autenticacao</option>
+                <option value="users">Utilizadores</option>
+                <option value="patients">Pacientes</option>
+                <option value="appointments">Agendamento</option>
+                <option value="consultations">Consultas</option>
+                <option value="prescriptions">Receitas</option>
+                <option value="sales">Vendas</option>
+                <option value="stock">Stock</option>
+                <option value="orders">Encomendas</option>
+                <option value="lab">Laboratorio</option>
+                <option value="system">Sistema</option>
+                <option value="settings">Configuracoes</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>De:</label>
+              <input type="date" id="filterStart" class="form-control" style="width:150px;">
+            </div>
+            <div class="filter-group">
+              <label>Ate:</label>
+              <input type="date" id="filterEnd" class="form-control" style="width:150px;">
+            </div>
+            <button class="btn btn-secondary" onclick="loadAudit()">Filtrar</button>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <div class="table-container">
+                <table class="data-table">
+                  <thead><tr><th>Data/Hora</th><th>Utilizador</th><th>Perfil</th><th>Acao</th><th>Modulo</th><th>Descricao</th></tr></thead>
+                  <tbody id="auditTable"></tbody>
+                </table>
+              </div>
+              <div id="emptyState" class="empty-state hidden">
+                <div class="empty-state-icon">&#x1f4cb;</div><h3>Sem registos</h3><p>Nenhum registo de auditoria encontrado</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <script>
+    (async () => {
+      const user = await loadUserInfo();
+      if (!user) return;
+      setupNavigation('audit');
+      document.getElementById('filterStart').value = today();
+      document.getElementById('filterEnd').value = today();
+      await loadAudit();
+    })();
+
+    async function loadAudit() {
+      try {
+        const filters = {
+          module: document.getElementById('filterModule').value || undefined,
+          startDate: document.getElementById('filterStart').value || undefined,
+          endDate: document.getElementById('filterEnd').value || undefined
+        };
+        const data = await window.api.getAuditLogs(filters);
+        const tbody = document.getElementById('auditTable');
+        const empty = document.getElementById('emptyState');
+        if (!data || data.length === 0) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
+        empty.classList.add('hidden');
+        tbody.innerHTML = data.map(a => `
+          <tr>
+            <td>${formatDateTime(a.created_at)}</td>
+            <td><strong>${escapeHtml(a.username || '-')}</strong></td>
+            <td>${formatProfile(a.user_profile)}</td>
+            <td><span class="badge badge-${a.action === 'DELETE' ? 'danger' : a.action === 'CREATE' ? 'success' : a.action === 'LOGIN' ? 'info' : 'secondary'}">${a.action}</span></td>
+            <td>${escapeHtml(a.module)}</td>
+            <td>${escapeHtml(a.description || '-')}</td>
+          </tr>
+        `).join('');
+      } catch (e) { showToast('Erro ao carregar auditoria', 'error'); }
+    }
+  </script>
+</body>
+</html>

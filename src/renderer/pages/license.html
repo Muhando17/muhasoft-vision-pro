@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Muhasoft GestPro - Licenca</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+  <script src="../js/utils.js"></script>
+  <script>document.write(getSidebarHTML('license'));</script>
+      <div class="main-content">
+        <div class="main-header"><h1>Sistema de Licenca</h1><div class="header-spacer"></div></div>
+        <div class="main-body">
+          <div class="license-card card">
+            <div class="card-body" style="padding:40px;">
+              <h2 style="margin-bottom:24px;">Licenciamento do Sistema</h2>
+
+              <div class="form-section">
+                <h3>ID do Dispositivo</h3>
+                <p class="text-sm text-muted mb-1">Forneça este ID ao suporte para obter a chave de ativação:</p>
+                <div class="device-id" id="deviceId">A carregar...</div>
+                <button class="btn btn-sm btn-secondary" onclick="copyDeviceId()">Copiar ID</button>
+              </div>
+
+              <div id="licenseInfo" class="form-section">
+                <h3>Estado da Licença</h3>
+                <div id="licenseStatus">A carregar...</div>
+              </div>
+
+              <div class="form-section">
+                <h3>Ativar Licença</h3>
+                <p class="text-sm text-muted mb-1">Introduza a chave no formato: XXXXX-XXXXX-XXXXX-XXXXX</p>
+                <div class="form-group">
+                  <input type="text" id="licenseKey" class="form-control" placeholder="XXXXX-XXXXX-XXXXX-XXXXX" style="text-align:center; font-size:18px; letter-spacing:2px; text-transform:uppercase;" maxlength="23">
+                </div>
+                <button class="btn btn-primary btn-lg btn-block" onclick="activateLicense()">Ativar Licença</button>
+              </div>
+
+              <div id="activationResult" style="display:none;" class="mt-2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <script>
+    (async () => {
+      const user = await loadUserInfo();
+      if (!user) return;
+      setupNavigation('license');
+      await loadLicenseInfo();
+    })();
+
+    async function loadLicenseInfo() {
+      try {
+        const deviceId = await window.api.getDeviceId();
+        document.getElementById('deviceId').textContent = deviceId;
+
+        const license = await window.api.getLicenseInfo();
+        const statusDiv = document.getElementById('licenseStatus');
+
+        if (!license || (!license.active && license.daysRemaining === 0 && !license.licenseKey)) {
+          statusDiv.innerHTML = `
+            <div style="padding:20px; background:#fef7e0; border-radius:8px; text-align:center;">
+              <p style="font-size:16px; font-weight:600; color:#e37400;">Sem licença ativa</p>
+              <p class="text-sm text-muted">Introduza uma chave de ativação para utilizar o sistema completo.</p>
+              <p class="text-sm text-muted mt-1">O sistema funciona em modo de avaliação sem licença.</p>
+            </div>
+          `;
+        } else if (license.active) {
+          statusDiv.innerHTML = `
+            <div style="padding:20px; background:#e6f4ea; border-radius:8px; text-align:center;">
+              <p style="font-size:16px; font-weight:600; color:#1e8e3e;">Licença Ativa</p>
+              <p class="mt-1"><strong>Dias Restantes:</strong> ${license.daysRemaining}</p>
+              <p><strong>Data de Ativação:</strong> ${formatDate(license.activationDate)}</p>
+              <p><strong>Data de Expiração:</strong> ${formatDate(license.expirationDate)}</p>
+              <p><strong>Chave:</strong> ${license.licenseKey}</p>
+              ${license.daysRemaining <= 30 ? '<p class="text-danger mt-1"><strong>Atenção: A licença expira em breve!</strong></p>' : ''}
+            </div>
+          `;
+        } else {
+          statusDiv.innerHTML = `
+            <div style="padding:20px; background:#fce8e6; border-radius:8px; text-align:center;">
+              <p style="font-size:16px; font-weight:600; color:#c5221f;">Licença Expirada</p>
+              <p class="mt-1">O sistema encontra-se em <strong>modo somente leitura</strong>.</p>
+              <p>Não é possível criar ou editar registos.</p>
+              <p><strong>Expirou em:</strong> ${formatDate(license.expirationDate)}</p>
+              <p class="mt-1 text-muted">Contacte o suporte para renovar a licença.</p>
+            </div>
+          `;
+        }
+      } catch (e) {
+        console.error('License error:', e);
+      }
+    }
+
+    function copyDeviceId() {
+      const id = document.getElementById('deviceId').textContent;
+      navigator.clipboard.writeText(id).then(() => {
+        showToast('ID copiado');
+      });
+    }
+
+    async function activateLicense() {
+      const key = document.getElementById('licenseKey').value.trim().toUpperCase();
+      if (!key) { showToast('Introduza a chave de ativação', 'error'); return; }
+
+      const resultDiv = document.getElementById('activationResult');
+      resultDiv.style.display = 'block';
+      resultDiv.innerHTML = '<p class="text-muted">A ativar...</p>';
+
+      const result = await window.api.activateLicense(key);
+      if (result.success) {
+        resultDiv.innerHTML = `<p class="text-success"><strong>Licença ativada com sucesso!</strong><br>Válida até: ${formatDate(result.expirationDate)}</p>`;
+        showToast('Licença ativada com sucesso!');
+        await loadLicenseInfo();
+      } else {
+        resultDiv.innerHTML = `<p class="text-danger">Erro: ${escapeHtml(result.error)}</p>`;
+        showToast(result.error, 'error');
+      }
+    }
+
+    // Auto-format license key
+    document.getElementById('licenseKey').addEventListener('input', function(e) {
+      let val = this.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      let formatted = '';
+      for (let i = 0; i < val.length && i < 20; i++) {
+        if (i > 0 && i % 5 === 0) formatted += '-';
+        formatted += val[i];
+      }
+      this.value = formatted;
+    });
+  </script>
+</body>
+</html>

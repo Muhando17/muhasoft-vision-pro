@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Muhasoft GestPro - Laboratorio</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+  <script src="../js/utils.js"></script>
+  <script>document.write(getSidebarHTML('lab'));</script>
+      <div class="main-content">
+        <div class="main-header"><h1>Laboratorio</h1><div class="header-spacer"></div></div>
+        <div class="main-body">
+          <div class="toolbar">
+            <div class="filter-group">
+              <label>Estado:</label>
+              <select id="filterStatus" class="form-control" style="width:180px;">
+                <option value="">Todos</option>
+                <option value="pendente">Pendente</option>
+                <option value="em_producao">Em Producao</option>
+                <option value="controle_qualidade">Controle Qualidade</option>
+                <option value="pronto">Pronto</option>
+                <option value="entregue">Entregue</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label>Prioridade:</label>
+              <select id="filterPriority" class="form-control" style="width:120px;">
+                <option value="">Todas</option>
+                <option value="urgente">Urgente</option>
+                <option value="normal">Normal</option>
+              </select>
+            </div>
+            <div class="ml-auto"><button class="btn btn-primary" onclick="openNewLab()">+ Nova Ordem</button></div>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <div class="table-container">
+                <table class="data-table">
+                  <thead><tr><th>Codigo</th><th>Paciente</th><th>Lente</th><th>Armacao</th><th>Prioridade</th><th>Responsavel</th><th>Estado</th><th>Acoes</th></tr></thead>
+                  <tbody id="labTable"></tbody>
+                </table>
+              </div>
+              <div id="emptyState" class="empty-state hidden">
+                <div class="empty-state-icon">&#x1f3ed;</div><h3>Sem ordens</h3><p>Crie uma nova ordem de producao</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <div class="modal-overlay" id="labModal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2 id="labModalTitle">Nova Ordem de Laboratorio</h2>
+        <button class="modal-close" onclick="hideModal('labModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="labForm">
+          <input type="hidden" id="labId">
+          <div class="form-row">
+            <div class="form-group"><label>Paciente *</label><select id="labPatient" class="form-control" required></select></div>
+            <div class="form-group"><label>Prioridade</label>
+              <select id="labPriority" class="form-control">
+                <option value="normal">Normal</option>
+                <option value="urgente">Urgente</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-section">
+            <h3>Lentes</h3>
+            <div class="form-row-3">
+              <div class="form-group"><label>Tipo</label>
+                <select id="labLensType" class="form-control">
+                  <option value="">Selecionar</option>
+                  <option value="Unifocal">Unifocal</option>
+                  <option value="Bifocal">Bifocal</option>
+                  <option value="Progressiva">Progressiva</option>
+                  <option value="Ocupacional">Ocupacional</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Material</label>
+                <select id="labLensMaterial" class="form-control">
+                  <option value="">Selecionar</option>
+                  <option value="CR-39">CR-39</option>
+                  <option value="Policarbonato">Policarbonato</option>
+                  <option value="Trivex">Trivex</option>
+                  <option value="Alto Indice 1.67">Alto Indice 1.67</option>
+                  <option value="Alto Indice 1.74">Alto Indice 1.74</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Tratamento</label>
+                <select id="labLensTreatment" class="form-control">
+                  <option value="">Selecionar</option>
+                  <option value="Anti-reflexo">Anti-reflexo</option>
+                  <option value="Fotocromatico">Fotocromatico</option>
+                  <option value="Blue Cut">Blue Cut</option>
+                  <option value="Anti-reflexo + Blue Cut">AR + Blue Cut</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="form-section">
+            <h3>Graduacao</h3>
+            <div class="eye-grid">
+              <div></div><label>ESF</label><label>CIL</label><label>EIXO</label><label>ADD</label><div></div>
+              <div class="eye-label">OD</div>
+              <input type="text" id="labOdEsf" class="form-control">
+              <input type="text" id="labOdCil" class="form-control">
+              <input type="text" id="labOdEixo" class="form-control">
+              <input type="text" id="labOdAdd" class="form-control">
+              <div></div>
+              <div class="eye-label">OE</div>
+              <input type="text" id="labOeEsf" class="form-control">
+              <input type="text" id="labOeCil" class="form-control">
+              <input type="text" id="labOeEixo" class="form-control">
+              <input type="text" id="labOeAdd" class="form-control">
+              <div></div>
+            </div>
+            <div class="form-group mt-1" style="max-width:150px;"><label>DP</label><input type="text" id="labDp" class="form-control"></div>
+          </div>
+          <div class="form-section">
+            <h3>Armacao</h3>
+            <div class="form-row-4">
+              <div class="form-group"><label>Marca</label><input type="text" id="labFrameBrand" class="form-control"></div>
+              <div class="form-group"><label>Modelo</label><input type="text" id="labFrameModel" class="form-control"></div>
+              <div class="form-group"><label>Cor</label><input type="text" id="labFrameColor" class="form-control"></div>
+              <div class="form-group"><label>Tamanho</label><input type="text" id="labFrameSize" class="form-control"></div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Responsavel</label><select id="labAssigned" class="form-control"><option value="">Selecionar</option></select></div>
+            <div class="form-group"><label>Notas</label><textarea id="labNotes" class="form-control" rows="2"></textarea></div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="hideModal('labModal')">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveLab()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (async () => {
+      const user = await loadUserInfo();
+      if (!user) return;
+      setupNavigation('lab');
+      await loadLab();
+    })();
+
+    document.getElementById('filterStatus').addEventListener('change', loadLab);
+    document.getElementById('filterPriority').addEventListener('change', loadLab);
+
+    async function loadLab() {
+      try {
+        const filters = {};
+        const status = document.getElementById('filterStatus').value;
+        const priority = document.getElementById('filterPriority').value;
+        if (status) filters.status = status;
+        if (priority) filters.priority = priority;
+        const data = await window.api.getLabOrders(filters);
+        renderLab(data);
+      } catch (e) { showToast('Erro ao carregar ordens', 'error'); }
+    }
+
+    function renderLab(data) {
+      const tbody = document.getElementById('labTable');
+      const empty = document.getElementById('emptyState');
+      if (!data || data.length === 0) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
+      empty.classList.add('hidden');
+      tbody.innerHTML = data.map(l => `
+        <tr>
+          <td><strong>${escapeHtml(l.code)}</strong></td>
+          <td>${escapeHtml(l.patient_name)}</td>
+          <td>${escapeHtml(l.lens_type || '-')} ${escapeHtml(l.lens_material || '')}</td>
+          <td>${escapeHtml(l.frame_brand || '-')} ${escapeHtml(l.frame_model || '')}</td>
+          <td>${formatStatus(l.priority)}</td>
+          <td>${escapeHtml(l.assigned_name || '-')}</td>
+          <td>${formatStatus(l.status)}</td>
+          <td class="actions">
+            <button class="btn btn-sm btn-secondary" onclick="editLab(${l.id})">Ver</button>
+            ${l.status === 'pendente' ? `<button class="btn btn-sm btn-warning" onclick="changeLabStatus(${l.id},'em_producao')">Iniciar</button>` : ''}
+            ${l.status === 'em_producao' ? `<button class="btn btn-sm btn-info" onclick="changeLabStatus(${l.id},'controle_qualidade')">QC</button>` : ''}
+            ${l.status === 'controle_qualidade' ? `<button class="btn btn-sm btn-success" onclick="changeLabStatus(${l.id},'pronto')">Pronto</button>` : ''}
+            ${l.status === 'pronto' ? `<button class="btn btn-sm btn-primary" onclick="changeLabStatus(${l.id},'entregue')">Entregue</button>` : ''}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function openNewLab() {
+      document.getElementById('labModalTitle').textContent = 'Nova Ordem de Laboratorio';
+      document.getElementById('labForm').reset();
+      document.getElementById('labId').value = '';
+      const patients = await window.api.getPatients('');
+      const users = await window.api.getUsers();
+      document.getElementById('labPatient').innerHTML = '<option value="">Selecionar</option>' +
+        patients.map(p => `<option value="${p.id}">${p.full_name}</option>`).join('');
+      document.getElementById('labAssigned').innerHTML = '<option value="">Selecionar</option>' +
+        users.filter(u => u.active && u.profile === 'laboratorio').map(u => `<option value="${u.id}">${u.full_name}</option>`).join('');
+      showModal('labModal');
+    }
+
+    async function editLab(id) {
+      const l = await window.api.getLabOrder(id);
+      if (!l) return;
+      await openNewLab();
+      document.getElementById('labModalTitle').textContent = `Ordem ${l.code}`;
+      document.getElementById('labId').value = l.id;
+      document.getElementById('labPatient').value = l.patient_id;
+      document.getElementById('labPriority').value = l.priority;
+      document.getElementById('labLensType').value = l.lens_type || '';
+      document.getElementById('labLensMaterial').value = l.lens_material || '';
+      document.getElementById('labLensTreatment').value = l.lens_treatment || '';
+      document.getElementById('labOdEsf').value = l.lab_od_esf || '';
+      document.getElementById('labOdCil').value = l.lab_od_cil || '';
+      document.getElementById('labOdEixo').value = l.lab_od_eixo || '';
+      document.getElementById('labOdAdd').value = l.lab_od_add || '';
+      document.getElementById('labOeEsf').value = l.lab_oe_esf || '';
+      document.getElementById('labOeCil').value = l.lab_oe_cil || '';
+      document.getElementById('labOeEixo').value = l.lab_oe_eixo || '';
+      document.getElementById('labOeAdd').value = l.lab_oe_add || '';
+      document.getElementById('labDp').value = l.lab_dp || '';
+      document.getElementById('labFrameBrand').value = l.frame_brand || '';
+      document.getElementById('labFrameModel').value = l.frame_model || '';
+      document.getElementById('labFrameColor').value = l.frame_color || '';
+      document.getElementById('labFrameSize').value = l.frame_size || '';
+      document.getElementById('labAssigned').value = l.assigned_to || '';
+      document.getElementById('labNotes').value = l.notes || '';
+    }
+
+    async function saveLab() {
+      const id = document.getElementById('labId').value;
+      const data = {
+        patient_id: parseInt(document.getElementById('labPatient').value),
+        priority: document.getElementById('labPriority').value,
+        lens_type: document.getElementById('labLensType').value || null,
+        lens_material: document.getElementById('labLensMaterial').value || null,
+        lens_treatment: document.getElementById('labLensTreatment').value || null,
+        lab_od_esf: document.getElementById('labOdEsf').value || null,
+        lab_od_cil: document.getElementById('labOdCil').value || null,
+        lab_od_eixo: document.getElementById('labOdEixo').value || null,
+        lab_od_add: document.getElementById('labOdAdd').value || null,
+        lab_oe_esf: document.getElementById('labOeEsf').value || null,
+        lab_oe_cil: document.getElementById('labOeCil').value || null,
+        lab_oe_eixo: document.getElementById('labOeEixo').value || null,
+        lab_oe_add: document.getElementById('labOeAdd').value || null,
+        lab_dp: document.getElementById('labDp').value || null,
+        frame_brand: document.getElementById('labFrameBrand').value || null,
+        frame_model: document.getElementById('labFrameModel').value || null,
+        frame_color: document.getElementById('labFrameColor').value || null,
+        frame_size: document.getElementById('labFrameSize').value || null,
+        assigned_to: document.getElementById('labAssigned').value ? parseInt(document.getElementById('labAssigned').value) : null,
+        notes: document.getElementById('labNotes').value || null
+      };
+      if (!data.patient_id) { showToast('Selecione um paciente', 'error'); return; }
+
+      let result;
+      if (id) { data.id = parseInt(id); result = await window.api.updateLabOrder(data); }
+      else { result = await window.api.createLabOrder(data); }
+
+      if (result.success) { showToast(id ? 'Ordem atualizada' : 'Ordem criada'); hideModal('labModal'); await loadLab(); }
+      else { showToast(result.error, 'error'); }
+    }
+
+    async function changeLabStatus(id, status) {
+      const result = await window.api.updateLabStatus({ id, status });
+      if (result.success) { showToast('Estado atualizado'); await loadLab(); }
+      else { showToast(result.error, 'error'); }
+    }
+  </script>
+</body>
+</html>
