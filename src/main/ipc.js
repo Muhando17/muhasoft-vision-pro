@@ -280,9 +280,29 @@ function setupIPC(mainWindow, db) {
   ipcMain.handle('consultations:create', async (event, data) => {
     try {
       if (!isLicenseValid(db)) return { success: false, error: 'Licença expirada. Modo somente leitura.' };
-      const columns = Object.keys(data).join(', ');
-      const placeholders = Object.keys(data).map(() => '?').join(', ');
-      const values = Object.values(data);
+      const allowedColumns = [
+        'patient_id', 'professional_id', 'appointment_id', 'type', 'consultation_date',
+        'chief_complaint', 'medical_history', 'family_history', 'current_medications', 'allergies',
+        'va_od_sc', 'va_od_cc', 'va_oe_sc', 'va_oe_cc',
+        'auto_od_esf', 'auto_od_cil', 'auto_od_eixo', 'auto_oe_esf', 'auto_oe_cil', 'auto_oe_eixo',
+        'ref_od_esf', 'ref_od_cil', 'ref_od_eixo', 'ref_od_add', 'ref_od_av',
+        'ref_oe_esf', 'ref_oe_cil', 'ref_oe_eixo', 'ref_oe_add', 'ref_oe_av', 'ref_dp',
+        'pio_od', 'pio_oe', 'pio_method', 'biomicroscopy_od', 'biomicroscopy_oe',
+        'fundoscopy_od', 'fundoscopy_oe',
+        'anamnesis_visual_symptoms', 'anamnesis_ocular_history', 'anamnesis_occupation',
+        'anamnesis_screen_time', 'anamnesis_reading_distance', 'anamnesis_driving',
+        'anamnesis_sports', 'anamnesis_current_glasses', 'anamnesis_last_exam_date', 'anamnesis_satisfaction',
+        'cover_test_distance', 'cover_test_near', 'convergence_near_point', 'accommodation',
+        'diagnosis', 'diagnosis_code', 'functional_diagnosis', 'treatment_plan', 'observations',
+        'next_revision_date', 'status'
+      ];
+      const sanitized = {};
+      for (const key of Object.keys(data)) {
+        if (allowedColumns.includes(key)) sanitized[key] = data[key];
+      }
+      const columns = Object.keys(sanitized).join(', ');
+      const placeholders = Object.keys(sanitized).map(() => '?').join(', ');
+      const values = Object.values(sanitized);
 
       const result = db.prepare(`INSERT INTO consultations (${columns}) VALUES (${placeholders})`).run(...values);
 
@@ -311,8 +331,28 @@ function setupIPC(mainWindow, db) {
       if (!isLicenseValid(db)) return { success: false, error: 'Licença expirada. Modo somente leitura.' };
       const id = data.id;
       delete data.id;
-      const sets = Object.keys(data).map(k => `${k} = ?`).join(', ');
-      const values = [...Object.values(data), id];
+      const allowedColumns = [
+        'patient_id', 'professional_id', 'appointment_id', 'type', 'consultation_date',
+        'chief_complaint', 'medical_history', 'family_history', 'current_medications', 'allergies',
+        'va_od_sc', 'va_od_cc', 'va_oe_sc', 'va_oe_cc',
+        'auto_od_esf', 'auto_od_cil', 'auto_od_eixo', 'auto_oe_esf', 'auto_oe_cil', 'auto_oe_eixo',
+        'ref_od_esf', 'ref_od_cil', 'ref_od_eixo', 'ref_od_add', 'ref_od_av',
+        'ref_oe_esf', 'ref_oe_cil', 'ref_oe_eixo', 'ref_oe_add', 'ref_oe_av', 'ref_dp',
+        'pio_od', 'pio_oe', 'pio_method', 'biomicroscopy_od', 'biomicroscopy_oe',
+        'fundoscopy_od', 'fundoscopy_oe',
+        'anamnesis_visual_symptoms', 'anamnesis_ocular_history', 'anamnesis_occupation',
+        'anamnesis_screen_time', 'anamnesis_reading_distance', 'anamnesis_driving',
+        'anamnesis_sports', 'anamnesis_current_glasses', 'anamnesis_last_exam_date', 'anamnesis_satisfaction',
+        'cover_test_distance', 'cover_test_near', 'convergence_near_point', 'accommodation',
+        'diagnosis', 'diagnosis_code', 'functional_diagnosis', 'treatment_plan', 'observations',
+        'next_revision_date', 'status'
+      ];
+      const sanitized = {};
+      for (const key of Object.keys(data)) {
+        if (allowedColumns.includes(key)) sanitized[key] = data[key];
+      }
+      const sets = Object.keys(sanitized).map(k => `${k} = ?`).join(', ');
+      const values = [...Object.values(sanitized), id];
 
       db.prepare(`UPDATE consultations SET ${sets}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...values);
       logAudit(db, currentUser, 'UPDATE', 'consultations', `Consulta atualizada ID: ${id}`);
@@ -350,9 +390,20 @@ function setupIPC(mainWindow, db) {
   ipcMain.handle('prescriptions:create', async (event, data) => {
     try {
       if (!isLicenseValid(db)) return { success: false, error: 'Licença expirada. Modo somente leitura.' };
-      const columns = Object.keys(data).join(', ');
-      const placeholders = Object.keys(data).map(() => '?').join(', ');
-      const result = db.prepare(`INSERT INTO prescriptions (${columns}) VALUES (${placeholders})`).run(...Object.values(data));
+      const allowedColumns = [
+        'consultation_id', 'patient_id', 'professional_id', 'prescription_date',
+        'rx_od_esf', 'rx_od_cil', 'rx_od_eixo', 'rx_od_add', 'rx_od_prisma', 'rx_od_base',
+        'rx_oe_esf', 'rx_oe_cil', 'rx_oe_eixo', 'rx_oe_add', 'rx_oe_prisma', 'rx_oe_base',
+        'rx_dp', 'rx_dp_near', 'lens_type', 'lens_material', 'lens_treatment',
+        'frame_notes', 'observations', 'valid_until', 'printed'
+      ];
+      const sanitized = {};
+      for (const key of Object.keys(data)) {
+        if (allowedColumns.includes(key)) sanitized[key] = data[key];
+      }
+      const columns = Object.keys(sanitized).join(', ');
+      const placeholders = Object.keys(sanitized).map(() => '?').join(', ');
+      const result = db.prepare(`INSERT INTO prescriptions (${columns}) VALUES (${placeholders})`).run(...Object.values(sanitized));
       logAudit(db, currentUser, 'CREATE', 'prescriptions', `Receita criada para paciente ID: ${data.patient_id}`);
       return { success: true, id: result.lastInsertRowid };
     } catch (error) {
@@ -365,8 +416,19 @@ function setupIPC(mainWindow, db) {
       if (!isLicenseValid(db)) return { success: false, error: 'Licença expirada. Modo somente leitura.' };
       const id = data.id;
       delete data.id;
-      const sets = Object.keys(data).map(k => `${k} = ?`).join(', ');
-      db.prepare(`UPDATE prescriptions SET ${sets}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...Object.values(data), id);
+      const allowedColumns = [
+        'consultation_id', 'patient_id', 'professional_id', 'prescription_date',
+        'rx_od_esf', 'rx_od_cil', 'rx_od_eixo', 'rx_od_add', 'rx_od_prisma', 'rx_od_base',
+        'rx_oe_esf', 'rx_oe_cil', 'rx_oe_eixo', 'rx_oe_add', 'rx_oe_prisma', 'rx_oe_base',
+        'rx_dp', 'rx_dp_near', 'lens_type', 'lens_material', 'lens_treatment',
+        'frame_notes', 'observations', 'valid_until', 'printed'
+      ];
+      const sanitized = {};
+      for (const key of Object.keys(data)) {
+        if (allowedColumns.includes(key)) sanitized[key] = data[key];
+      }
+      const sets = Object.keys(sanitized).map(k => `${k} = ?`).join(', ');
+      db.prepare(`UPDATE prescriptions SET ${sets}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(...Object.values(sanitized), id);
       logAudit(db, currentUser, 'UPDATE', 'prescriptions', `Receita atualizada ID: ${id}`);
       return { success: true };
     } catch (error) {
@@ -898,11 +960,13 @@ function setupIPC(mainWindow, db) {
       const { getDbPath } = require('./database');
       const dbPath = getDbPath();
 
+      // Log before closing the db
+      logAudit(db, currentUser, 'RESTORE', 'system', `Backup restaurado de: ${backupPath}`);
+
       // Close current connection and copy
       db.close();
       fs.copyFileSync(backupPath, dbPath);
 
-      logAudit(db, currentUser, 'RESTORE', 'system', `Backup restaurado de: ${backupPath}`);
       return { success: true, message: 'Backup restaurado. Reinicie a aplicação.' };
     } catch (error) {
       return { success: false, error: error.message };
