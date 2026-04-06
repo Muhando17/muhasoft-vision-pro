@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Muhasoft GestPro - Receitas</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+  <script src="../js/utils.js"></script>
+  <script>document.write(getSidebarHTML('prescriptions'));</script>
+      <div class="main-content">
+        <div class="main-header">
+          <h1>Receituario</h1>
+          <div class="header-spacer"></div>
+        </div>
+        <div class="main-body">
+          <div class="toolbar">
+            <div class="search-box">
+              <input type="text" id="searchInput" placeholder="  Pesquisar receitas...">
+            </div>
+            <div class="ml-auto">
+              <button class="btn btn-primary" onclick="openNewPrescription()">+ Nova Receita</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr><th>Data</th><th>Paciente</th><th>Profissional</th><th>OD ESF/CIL/EIXO</th><th>OE ESF/CIL/EIXO</th><th>ADD</th><th>Impressa</th><th>Acoes</th></tr>
+                  </thead>
+                  <tbody id="prescriptionsTable"></tbody>
+                </table>
+              </div>
+              <div id="emptyState" class="empty-state hidden">
+                <div class="empty-state-icon">&#x1f4c4;</div>
+                <h3>Sem receitas</h3><p>Crie uma nova receita</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <!-- Prescription Modal -->
+  <div class="modal-overlay" id="prescriptionModal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2 id="rxModalTitle">Nova Receita</h2>
+        <button class="modal-close" onclick="hideModal('prescriptionModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="rxForm">
+          <input type="hidden" id="rxId">
+          <div class="form-section">
+            <h3>Informacoes</h3>
+            <div class="form-row">
+              <div class="form-group"><label>Paciente *</label><select id="rxPatient" class="form-control" required></select></div>
+              <div class="form-group"><label>Data</label><input type="date" id="rxDate" class="form-control"></div>
+            </div>
+          </div>
+          <div class="form-section">
+            <h3>Prescricao - Olho Direito (OD)</h3>
+            <div class="form-row-6">
+              <div class="form-group"><label>ESF</label><input type="text" id="rxOdEsf" class="form-control" placeholder="+0.00"></div>
+              <div class="form-group"><label>CIL</label><input type="text" id="rxOdCil" class="form-control" placeholder="-0.00"></div>
+              <div class="form-group"><label>EIXO</label><input type="text" id="rxOdEixo" class="form-control" placeholder="0"></div>
+              <div class="form-group"><label>ADD</label><input type="text" id="rxOdAdd" class="form-control" placeholder="+0.00"></div>
+              <div class="form-group"><label>PRISMA</label><input type="text" id="rxOdPrisma" class="form-control"></div>
+              <div class="form-group"><label>BASE</label><input type="text" id="rxOdBase" class="form-control"></div>
+            </div>
+          </div>
+          <div class="form-section">
+            <h3>Prescricao - Olho Esquerdo (OE)</h3>
+            <div class="form-row-6">
+              <div class="form-group"><label>ESF</label><input type="text" id="rxOeEsf" class="form-control" placeholder="+0.00"></div>
+              <div class="form-group"><label>CIL</label><input type="text" id="rxOeCil" class="form-control" placeholder="-0.00"></div>
+              <div class="form-group"><label>EIXO</label><input type="text" id="rxOeEixo" class="form-control" placeholder="0"></div>
+              <div class="form-group"><label>ADD</label><input type="text" id="rxOeAdd" class="form-control" placeholder="+0.00"></div>
+              <div class="form-group"><label>PRISMA</label><input type="text" id="rxOePrisma" class="form-control"></div>
+              <div class="form-group"><label>BASE</label><input type="text" id="rxOeBase" class="form-control"></div>
+            </div>
+          </div>
+          <div class="form-section">
+            <h3>Detalhes Adicionais</h3>
+            <div class="form-row-3">
+              <div class="form-group"><label>DP (Longe)</label><input type="text" id="rxDp" class="form-control"></div>
+              <div class="form-group"><label>DP (Perto)</label><input type="text" id="rxDpNear" class="form-control"></div>
+              <div class="form-group"><label>Validade</label><input type="date" id="rxValidUntil" class="form-control"></div>
+            </div>
+            <div class="form-row-3">
+              <div class="form-group"><label>Tipo de Lente</label>
+                <select id="rxLensType" class="form-control">
+                  <option value="">Selecionar</option>
+                  <option value="Unifocal">Unifocal</option>
+                  <option value="Bifocal">Bifocal</option>
+                  <option value="Progressiva">Progressiva</option>
+                  <option value="Ocupacional">Ocupacional</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Material</label>
+                <select id="rxLensMaterial" class="form-control">
+                  <option value="">Selecionar</option>
+                  <option value="CR-39">CR-39</option>
+                  <option value="Policarbonato">Policarbonato</option>
+                  <option value="Trivex">Trivex</option>
+                  <option value="Alto Indice 1.67">Alto Indice 1.67</option>
+                  <option value="Alto Indice 1.74">Alto Indice 1.74</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Tratamento</label>
+                <select id="rxLensTreatment" class="form-control">
+                  <option value="">Selecionar</option>
+                  <option value="Anti-reflexo">Anti-reflexo</option>
+                  <option value="Fotocromatico">Fotocromatico</option>
+                  <option value="Blue Cut">Blue Cut</option>
+                  <option value="Anti-reflexo + Blue Cut">AR + Blue Cut</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Notas da Armacao</label><textarea id="rxFrameNotes" class="form-control" rows="2"></textarea></div>
+              <div class="form-group"><label>Observacoes</label><textarea id="rxObservations" class="form-control" rows="2"></textarea></div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="hideModal('prescriptionModal')">Cancelar</button>
+        <button class="btn btn-success" onclick="savePrescription(true)">Guardar e Imprimir</button>
+        <button class="btn btn-primary" onclick="savePrescription(false)">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Print Preview Modal -->
+  <div class="modal-overlay" id="printModal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2>Pre-visualizacao da Receita</h2>
+        <button class="modal-close" onclick="hideModal('printModal')">&times;</button>
+      </div>
+      <div class="modal-body" id="printContent"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="hideModal('printModal')">Fechar</button>
+        <button class="btn btn-primary" onclick="doPrint()">Imprimir</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+
+    (async () => {
+      currentUser = await loadUserInfo();
+      if (!currentUser) return;
+      setupNavigation('prescriptions');
+      await loadPrescriptions();
+    })();
+
+    async function loadPrescriptions() {
+      try {
+        const data = await window.api.getPrescriptions({});
+        renderPrescriptions(data);
+      } catch (e) { showToast('Erro ao carregar receitas', 'error'); }
+    }
+
+    function renderPrescriptions(data) {
+      const tbody = document.getElementById('prescriptionsTable');
+      const empty = document.getElementById('emptyState');
+      if (!data || data.length === 0) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
+      empty.classList.add('hidden');
+      tbody.innerHTML = data.map(r => `
+        <tr>
+          <td>${formatDate(r.prescription_date)}</td>
+          <td>${escapeHtml(r.patient_name)}</td>
+          <td>${escapeHtml(r.professional_name)}</td>
+          <td>${r.rx_od_esf || '-'} / ${r.rx_od_cil || '-'} / ${r.rx_od_eixo || '-'}</td>
+          <td>${r.rx_oe_esf || '-'} / ${r.rx_oe_cil || '-'} / ${r.rx_oe_eixo || '-'}</td>
+          <td>${r.rx_od_add || '-'}</td>
+          <td>${r.printed ? '<span class="badge badge-success">Sim</span>' : '<span class="badge badge-secondary">Nao</span>'}</td>
+          <td class="actions">
+            <button class="btn btn-sm btn-secondary" onclick="viewPrescription(${r.id})">Ver</button>
+            <button class="btn btn-sm btn-primary" onclick="printPrescription(${r.id})">Imprimir</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function openNewPrescription() {
+      document.getElementById('rxModalTitle').textContent = 'Nova Receita';
+      document.getElementById('rxForm').reset();
+      document.getElementById('rxId').value = '';
+      document.getElementById('rxDate').value = today();
+      const patients = await window.api.getPatients('');
+      document.getElementById('rxPatient').innerHTML = '<option value="">Selecionar</option>' +
+        patients.map(p => `<option value="${p.id}">${p.full_name} (${p.code})</option>`).join('');
+      showModal('prescriptionModal');
+    }
+
+    async function viewPrescription(id) {
+      const r = await window.api.getPrescription(id);
+      if (!r) return;
+      await openNewPrescription();
+      document.getElementById('rxModalTitle').textContent = 'Editar Receita';
+      document.getElementById('rxId').value = r.id;
+      document.getElementById('rxPatient').value = r.patient_id;
+      document.getElementById('rxDate').value = r.prescription_date;
+      document.getElementById('rxOdEsf').value = r.rx_od_esf || '';
+      document.getElementById('rxOdCil').value = r.rx_od_cil || '';
+      document.getElementById('rxOdEixo').value = r.rx_od_eixo || '';
+      document.getElementById('rxOdAdd').value = r.rx_od_add || '';
+      document.getElementById('rxOdPrisma').value = r.rx_od_prisma || '';
+      document.getElementById('rxOdBase').value = r.rx_od_base || '';
+      document.getElementById('rxOeEsf').value = r.rx_oe_esf || '';
+      document.getElementById('rxOeCil').value = r.rx_oe_cil || '';
+      document.getElementById('rxOeEixo').value = r.rx_oe_eixo || '';
+      document.getElementById('rxOeAdd').value = r.rx_oe_add || '';
+      document.getElementById('rxOePrisma').value = r.rx_oe_prisma || '';
+      document.getElementById('rxOeBase').value = r.rx_oe_base || '';
+      document.getElementById('rxDp').value = r.rx_dp || '';
+      document.getElementById('rxDpNear').value = r.rx_dp_near || '';
+      document.getElementById('rxLensType').value = r.lens_type || '';
+      document.getElementById('rxLensMaterial').value = r.lens_material || '';
+      document.getElementById('rxLensTreatment').value = r.lens_treatment || '';
+      document.getElementById('rxFrameNotes').value = r.frame_notes || '';
+      document.getElementById('rxObservations').value = r.observations || '';
+      document.getElementById('rxValidUntil').value = r.valid_until || '';
+    }
+
+    async function savePrescription(print) {
+      const id = document.getElementById('rxId').value;
+      const data = {
+        patient_id: parseInt(document.getElementById('rxPatient').value),
+        professional_id: currentUser.id,
+        prescription_date: document.getElementById('rxDate').value || today(),
+        rx_od_esf: document.getElementById('rxOdEsf').value || null,
+        rx_od_cil: document.getElementById('rxOdCil').value || null,
+        rx_od_eixo: document.getElementById('rxOdEixo').value || null,
+        rx_od_add: document.getElementById('rxOdAdd').value || null,
+        rx_od_prisma: document.getElementById('rxOdPrisma').value || null,
+        rx_od_base: document.getElementById('rxOdBase').value || null,
+        rx_oe_esf: document.getElementById('rxOeEsf').value || null,
+        rx_oe_cil: document.getElementById('rxOeCil').value || null,
+        rx_oe_eixo: document.getElementById('rxOeEixo').value || null,
+        rx_oe_add: document.getElementById('rxOeAdd').value || null,
+        rx_oe_prisma: document.getElementById('rxOePrisma').value || null,
+        rx_oe_base: document.getElementById('rxOeBase').value || null,
+        rx_dp: document.getElementById('rxDp').value || null,
+        rx_dp_near: document.getElementById('rxDpNear').value || null,
+        lens_type: document.getElementById('rxLensType').value || null,
+        lens_material: document.getElementById('rxLensMaterial').value || null,
+        lens_treatment: document.getElementById('rxLensTreatment').value || null,
+        frame_notes: document.getElementById('rxFrameNotes').value || null,
+        observations: document.getElementById('rxObservations').value || null,
+        valid_until: document.getElementById('rxValidUntil').value || null
+      };
+
+      if (!data.patient_id) { showToast('Selecione um paciente', 'error'); return; }
+
+      let result;
+      if (id) { data.id = parseInt(id); result = await window.api.updatePrescription(data); }
+      else { result = await window.api.createPrescription(data); }
+
+      if (result.success) {
+        showToast('Receita guardada');
+        hideModal('prescriptionModal');
+        if (print) { await printPrescription(result.id || parseInt(id)); }
+        await loadPrescriptions();
+      } else { showToast(result.error, 'error'); }
+    }
+
+    async function printPrescription(id) {
+      const r = await window.api.getPrescription(id);
+      if (!r) return;
+      const settings = await window.api.getSettings();
+      document.getElementById('printContent').innerHTML = `
+        <div class="prescription-print">
+          <div class="header">
+            <h1>${escapeHtml(settings.clinic_name || 'Optica Muhasoft')}</h1>
+            <p>${escapeHtml(settings.clinic_address || '')}</p>
+            <p>Tel: ${escapeHtml(settings.clinic_phone || '')} | Email: ${escapeHtml(settings.clinic_email || '')}</p>
+            <p>NIF: ${escapeHtml(settings.clinic_tax_number || '')}</p>
+          </div>
+          <h2 style="text-align:center; margin-bottom:20px;">RECEITA OPTICA</h2>
+          <div class="patient-info">
+            <p><strong>Paciente:</strong> ${escapeHtml(r.patient_name)}</p>
+            <p><strong>Data Nasc.:</strong> ${formatDate(r.birth_date)} | <strong>Data:</strong> ${formatDate(r.prescription_date)}</p>
+          </div>
+          <table class="rx-table">
+            <thead>
+              <tr><th></th><th>ESF</th><th>CIL</th><th>EIXO</th><th>ADD</th><th>PRISMA</th><th>BASE</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><strong>OD</strong></td><td>${r.rx_od_esf || '-'}</td><td>${r.rx_od_cil || '-'}</td><td>${r.rx_od_eixo || '-'}</td><td>${r.rx_od_add || '-'}</td><td>${r.rx_od_prisma || '-'}</td><td>${r.rx_od_base || '-'}</td></tr>
+              <tr><td><strong>OE</strong></td><td>${r.rx_oe_esf || '-'}</td><td>${r.rx_oe_cil || '-'}</td><td>${r.rx_oe_eixo || '-'}</td><td>${r.rx_oe_add || '-'}</td><td>${r.rx_oe_prisma || '-'}</td><td>${r.rx_oe_base || '-'}</td></tr>
+            </tbody>
+          </table>
+          <p><strong>DP Longe:</strong> ${r.rx_dp || '-'} | <strong>DP Perto:</strong> ${r.rx_dp_near || '-'}</p>
+          <p><strong>Tipo de Lente:</strong> ${r.lens_type || '-'} | <strong>Material:</strong> ${r.lens_material || '-'} | <strong>Tratamento:</strong> ${r.lens_treatment || '-'}</p>
+          ${r.frame_notes ? `<p><strong>Armacao:</strong> ${escapeHtml(r.frame_notes)}</p>` : ''}
+          ${r.observations ? `<p><strong>Obs.:</strong> ${escapeHtml(r.observations)}</p>` : ''}
+          <p><strong>Validade:</strong> ${r.valid_until ? formatDate(r.valid_until) : '6 meses'}</p>
+          <div class="signature">
+            <div class="signature-line"></div>
+            <p><strong>${escapeHtml(r.professional_name)}</strong></p>
+            <p>${escapeHtml(r.professional_profile === 'oftalmologista' ? 'Medico Oftalmologista' : 'Optometrista')}</p>
+          </div>
+        </div>
+      `;
+      showModal('printModal');
+      await window.api.printPrescription(id);
+    }
+
+    function doPrint() {
+      const content = document.getElementById('printContent').innerHTML;
+      const win = window.open('', '_blank');
+      win.document.write(`<html><head><title>Receita</title><link rel="stylesheet" href="../css/styles.css"><style>body{background:white;overflow:visible;padding:20px;}@media print{body{padding:0;}}</style></head><body>${content}</body></html>`);
+      win.document.close();
+      setTimeout(() => { win.print(); win.close(); }, 500);
+    }
+  </script>
+</body>
+</html>

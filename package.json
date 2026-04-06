@@ -1,0 +1,73 @@
+{
+  "name": "muhasoft-gestpro",
+  "version": "1.0.0",
+  "description": "Muhasoft GestPro - Sistema Profissional de Gestão de Óptica",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "NODE_ENV=development electron .",
+    "build": "electron-builder --win",
+    "lint": "eslint src/ --ext .js",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "author": "Muhasoft",
+  "license": "UNLICENSED",
+  "private": true,
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "bcryptjs": "^2.4.3",
+    "electron-store": "^8.2.0",
+    "express": "^4.21.0",
+    "node-machine-id": "^1.1.12",
+    "socket.io": "^4.8.0",
+    "socket.io-client": "^4.8.0",
+    "uuid": "^10.0.0",
+    "node-cron": "^3.0.3",
+    "archiver": "^7.0.1"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
+    "eslint": "^8.57.0"
+  },
+  "build": {
+    "appId": "com.muhasoft.gestpro",
+    "productName": "Muhasoft GestPro",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "database/**/*",
+      "config/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "src/renderer/assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "src/renderer/assets/icon.ico",
+      "uninstallerIcon": "src/renderer/assets/icon.ico",
+      "installerHeaderIcon": "src/renderer/assets/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Muhasoft GestPro"
+    },
+    "extraResources": [
+      {
+        "from": "database/",
+        "to": "database/"
+      }
+    ]
+  }
+}

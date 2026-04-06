@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Muhasoft GestPro - Revisoes</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+  <script src="../js/utils.js"></script>
+  <script>document.write(getSidebarHTML('revisions'));</script>
+      <div class="main-content">
+        <div class="main-header"><h1>Revisoes</h1><div class="header-spacer"></div></div>
+        <div class="main-body">
+          <div class="card mb-3">
+            <div class="card-header"><h2>Revisoes Proximas (7 dias)</h2></div>
+            <div class="card-body">
+              <div id="upcomingRevisions">
+                <div class="empty-state"><p>Sem revisoes proximas</p></div>
+              </div>
+            </div>
+          </div>
+          <div class="toolbar">
+            <div class="filter-group">
+              <label>Estado:</label>
+              <select id="filterStatus" class="form-control" style="width:150px;">
+                <option value="">Todos</option>
+                <option value="pendente">Pendente</option>
+                <option value="notificada">Notificada</option>
+                <option value="realizada">Realizada</option>
+                <option value="cancelada">Cancelada</option>
+              </select>
+            </div>
+            <button class="btn btn-secondary" onclick="loadRevisions()">Filtrar</button>
+          </div>
+          <div class="card">
+            <div class="card-header"><h2>Todas as Revisoes</h2></div>
+            <div class="card-body">
+              <div class="table-container">
+                <table class="data-table">
+                  <thead><tr><th>Data</th><th>Paciente</th><th>Telefone</th><th>Estado</th><th>Notas</th></tr></thead>
+                  <tbody id="revisionsTable"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <script>
+    (async () => {
+      const user = await loadUserInfo();
+      if (!user) return;
+      setupNavigation('revisions');
+      await loadUpcoming();
+      await loadRevisions();
+    })();
+
+    document.getElementById('filterStatus').addEventListener('change', loadRevisions);
+
+    async function loadUpcoming() {
+      try {
+        const data = await window.api.getUpcomingRevisions();
+        if (data && data.length > 0) {
+          document.getElementById('upcomingRevisions').innerHTML = `
+            <table class="data-table">
+              <thead><tr><th>Data</th><th>Paciente</th><th>Telefone</th><th>Estado</th></tr></thead>
+              <tbody>${data.map(r => `
+                <tr style="background: #fef7e0;">
+                  <td><strong>${formatDate(r.scheduled_date)}</strong></td>
+                  <td>${escapeHtml(r.patient_name)}</td>
+                  <td>${escapeHtml(r.patient_phone || '-')}</td>
+                  <td>${formatStatus(r.status)}</td>
+                </tr>
+              `).join('')}</tbody>
+            </table>
+          `;
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    async function loadRevisions() {
+      try {
+        const filters = {};
+        const status = document.getElementById('filterStatus').value;
+        if (status) filters.status = status;
+        const data = await window.api.getRevisions(filters);
+        const tbody = document.getElementById('revisionsTable');
+        if (!data || data.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Sem revisoes</td></tr>'; return; }
+        tbody.innerHTML = data.map(r => `
+          <tr>
+            <td>${formatDate(r.scheduled_date)}</td>
+            <td>${escapeHtml(r.patient_name)}</td>
+            <td>${escapeHtml(r.patient_phone || '-')}</td>
+            <td>${formatStatus(r.status)}</td>
+            <td>${escapeHtml(r.notes || '-')}</td>
+          </tr>
+        `).join('');
+      } catch (e) { showToast('Erro ao carregar revisoes', 'error'); }
+    }
+  </script>
+</body>
+</html>

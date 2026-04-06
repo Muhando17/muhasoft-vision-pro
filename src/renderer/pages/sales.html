@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Muhasoft GestPro - Vendas</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+  <script src="../js/utils.js"></script>
+  <script>document.write(getSidebarHTML('sales'));</script>
+      <div class="main-content">
+        <div class="main-header">
+          <h1>Vendas</h1>
+          <div class="header-spacer"></div>
+        </div>
+        <div class="main-body">
+          <div class="toolbar">
+            <div class="filter-group">
+              <label>Estado:</label>
+              <select id="filterStatus" class="form-control" style="width:140px;">
+                <option value="">Todos</option>
+                <option value="producao">Producao</option>
+                <option value="pronto">Pronto</option>
+                <option value="entregue">Entregue</option>
+                <option value="cancelada">Cancelada</option>
+              </select>
+            </div>
+            <div class="ml-auto">
+              <button class="btn btn-primary" onclick="openNewSale()">+ Nova Venda</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr><th>Codigo</th><th>Data</th><th>Paciente</th><th>Total</th><th>Pagamento</th><th>Estado</th><th>Acoes</th></tr>
+                  </thead>
+                  <tbody id="salesTable"></tbody>
+                </table>
+              </div>
+              <div id="emptyState" class="empty-state hidden">
+                <div class="empty-state-icon">&#x1f4b0;</div>
+                <h3>Sem vendas</h3><p>Crie uma nova venda</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <!-- Sale Modal -->
+  <div class="modal-overlay" id="saleModal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2 id="saleModalTitle">Nova Venda</h2>
+        <button class="modal-close" onclick="hideModal('saleModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="saleForm">
+          <input type="hidden" id="saleId">
+          <div class="form-row">
+            <div class="form-group"><label>Paciente *</label><select id="salePatient" class="form-control" required></select></div>
+            <div class="form-group"><label>Receita Vinculada</label><select id="salePrescription" class="form-control"><option value="">Nenhuma</option></select></div>
+          </div>
+          <div class="form-section">
+            <h3>Itens da Venda</h3>
+            <div id="saleItems"></div>
+            <button type="button" class="btn btn-sm btn-secondary mt-1" onclick="addSaleItem()">+ Adicionar Item</button>
+          </div>
+          <div class="form-row-3 mt-2">
+            <div class="form-group"><label>Subtotal</label><input type="number" id="saleSubtotal" class="form-control" readonly></div>
+            <div class="form-group"><label>Desconto</label><input type="number" id="saleDiscount" class="form-control" value="0" step="0.01" onchange="calcTotal()"></div>
+            <div class="form-group"><label>Total</label><input type="number" id="saleTotal" class="form-control" readonly></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Metodo de Pagamento</label>
+              <select id="salePayMethod" class="form-control">
+                <option value="dinheiro">Dinheiro</option>
+                <option value="cartao">Cartao</option>
+                <option value="transferencia">Transferencia</option>
+                <option value="cheque">Cheque</option>
+                <option value="misto">Misto</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Estado Pagamento</label>
+              <select id="salePayStatus" class="form-control">
+                <option value="pendente">Pendente</option>
+                <option value="parcial">Parcial</option>
+                <option value="pago">Pago</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group"><label>Notas</label><textarea id="saleNotes" class="form-control" rows="2"></textarea></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="hideModal('saleModal')">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveSale()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let stockItems = [];
+
+    (async () => {
+      const user = await loadUserInfo();
+      if (!user) return;
+      setupNavigation('sales');
+      stockItems = await window.api.getStock({});
+      await loadSales();
+    })();
+
+    document.getElementById('filterStatus').addEventListener('change', loadSales);
+
+    async function loadSales() {
+      try {
+        const filters = {};
+        const status = document.getElementById('filterStatus').value;
+        if (status) filters.status = status;
+        const data = await window.api.getSales(filters);
+        renderSales(data);
+      } catch (e) { showToast('Erro ao carregar vendas', 'error'); }
+    }
+
+    function renderSales(data) {
+      const tbody = document.getElementById('salesTable');
+      const empty = document.getElementById('emptyState');
+      if (!data || data.length === 0) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
+      empty.classList.add('hidden');
+      tbody.innerHTML = data.map(s => `
+        <tr>
+          <td><strong>${escapeHtml(s.code)}</strong></td>
+          <td>${formatDateTime(s.sale_date)}</td>
+          <td>${escapeHtml(s.patient_name)}</td>
+          <td>${formatCurrency(s.total)}</td>
+          <td>${formatStatus(s.payment_status)}</td>
+          <td>${formatStatus(s.status)}</td>
+          <td class="actions">
+            <button class="btn btn-sm btn-secondary" onclick="viewSale(${s.id})">Ver</button>
+            ${s.status === 'producao' ? `<button class="btn btn-sm btn-success" onclick="updateStatus(${s.id},'pronto')">Pronto</button>` : ''}
+            ${s.status === 'pronto' ? `<button class="btn btn-sm btn-primary" onclick="updateStatus(${s.id},'entregue')">Entregue</button>` : ''}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    let itemCount = 0;
+
+    function addSaleItem() {
+      itemCount++;
+      const div = document.createElement('div');
+      div.className = 'form-row-4 mb-1';
+      div.id = `item-${itemCount}`;
+      div.innerHTML = `
+        <div class="form-group"><label>Artigo</label>
+          <select class="form-control item-stock" onchange="itemChanged(${itemCount})">
+            <option value="">Manual</option>
+            ${stockItems.filter(s => s.active && s.quantity > 0).map(s => `<option value="${s.id}" data-price="${s.sale_price}">${s.name} (${s.quantity})</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group"><label>Descricao</label><input type="text" class="form-control item-desc"></div>
+        <div class="form-group"><label>Qtd</label><input type="number" class="form-control item-qty" value="1" min="1" onchange="calcSubtotal()"></div>
+        <div class="form-group"><label>Preco</label>
+          <div class="d-flex gap-1">
+            <input type="number" class="form-control item-price" step="0.01" value="0" onchange="calcSubtotal()">
+            <button type="button" class="btn btn-sm btn-danger" onclick="removeItem(${itemCount})">X</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('saleItems').appendChild(div);
+    }
+
+    function removeItem(id) {
+      const el = document.getElementById(`item-${id}`);
+      if (el) el.remove();
+      calcSubtotal();
+    }
+
+    function itemChanged(id) {
+      const row = document.getElementById(`item-${id}`);
+      const select = row.querySelector('.item-stock');
+      const opt = select.options[select.selectedIndex];
+      if (opt.value) {
+        row.querySelector('.item-desc').value = opt.text.split(' (')[0];
+        row.querySelector('.item-price').value = opt.dataset.price || 0;
+      }
+      calcSubtotal();
+    }
+
+    function calcSubtotal() {
+      let subtotal = 0;
+      document.querySelectorAll('[id^="item-"]').forEach(row => {
+        const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+        const price = parseFloat(row.querySelector('.item-price').value) || 0;
+        subtotal += qty * price;
+      });
+      document.getElementById('saleSubtotal').value = subtotal.toFixed(2);
+      calcTotal();
+    }
+
+    function calcTotal() {
+      const subtotal = parseFloat(document.getElementById('saleSubtotal').value) || 0;
+      const discount = parseFloat(document.getElementById('saleDiscount').value) || 0;
+      document.getElementById('saleTotal').value = (subtotal - discount).toFixed(2);
+    }
+
+    async function openNewSale() {
+      document.getElementById('saleModalTitle').textContent = 'Nova Venda';
+      document.getElementById('saleForm').reset();
+      document.getElementById('saleId').value = '';
+      document.getElementById('saleItems').innerHTML = '';
+      itemCount = 0;
+      addSaleItem();
+      const patients = await window.api.getPatients('');
+      document.getElementById('salePatient').innerHTML = '<option value="">Selecionar</option>' +
+        patients.map(p => `<option value="${p.id}">${p.full_name} (${p.code})</option>`).join('');
+      showModal('saleModal');
+    }
+
+    async function viewSale(id) {
+      const sale = await window.api.getSale(id);
+      if (!sale) return;
+      await openNewSale();
+      document.getElementById('saleModalTitle').textContent = `Venda ${sale.code}`;
+      document.getElementById('saleId').value = sale.id;
+      document.getElementById('salePatient').value = sale.patient_id;
+      document.getElementById('salePayMethod').value = sale.payment_method || 'dinheiro';
+      document.getElementById('salePayStatus').value = sale.payment_status;
+      document.getElementById('saleDiscount').value = sale.discount;
+      document.getElementById('saleNotes').value = sale.notes || '';
+      document.getElementById('saleItems').innerHTML = '';
+      itemCount = 0;
+      if (sale.items) {
+        sale.items.forEach(item => {
+          addSaleItem();
+          const row = document.getElementById(`item-${itemCount}`);
+          if (item.stock_item_id) row.querySelector('.item-stock').value = item.stock_item_id;
+          row.querySelector('.item-desc').value = item.description;
+          row.querySelector('.item-qty').value = item.quantity;
+          row.querySelector('.item-price').value = item.unit_price;
+        });
+      }
+      calcSubtotal();
+    }
+
+    async function saveSale() {
+      const id = document.getElementById('saleId').value;
+      const items = [];
+      document.querySelectorAll('[id^="item-"]').forEach(row => {
+        const stockId = row.querySelector('.item-stock').value;
+        const desc = row.querySelector('.item-desc').value;
+        const qty = parseFloat(row.querySelector('.item-qty').value) || 1;
+        const price = parseFloat(row.querySelector('.item-price').value) || 0;
+        if (desc) {
+          items.push({
+            stock_item_id: stockId ? parseInt(stockId) : null,
+            description: desc, quantity: qty, unit_price: price,
+            discount: 0, total: qty * price
+          });
+        }
+      });
+
+      const data = {
+        patient_id: parseInt(document.getElementById('salePatient').value),
+        prescription_id: document.getElementById('salePrescription').value ? parseInt(document.getElementById('salePrescription').value) : null,
+        subtotal: parseFloat(document.getElementById('saleSubtotal').value) || 0,
+        discount: parseFloat(document.getElementById('saleDiscount').value) || 0,
+        total: parseFloat(document.getElementById('saleTotal').value) || 0,
+        payment_method: document.getElementById('salePayMethod').value,
+        payment_status: document.getElementById('salePayStatus').value,
+        notes: document.getElementById('saleNotes').value || null,
+        items
+      };
+
+      if (!data.patient_id) { showToast('Selecione um paciente', 'error'); return; }
+      if (items.length === 0) { showToast('Adicione pelo menos um item', 'error'); return; }
+
+      let result;
+      if (id) { data.id = parseInt(id); result = await window.api.updateSale(data); }
+      else { result = await window.api.createSale(data); }
+
+      if (result.success) {
+        showToast(id ? 'Venda atualizada' : 'Venda criada');
+        hideModal('saleModal');
+        await loadSales();
+        stockItems = await window.api.getStock({});
+      } else { showToast(result.error, 'error'); }
+    }
+
+    async function updateStatus(id, status) {
+      const result = await window.api.updateSaleStatus({ id, status });
+      if (result.success) { showToast('Estado atualizado'); await loadSales(); }
+      else { showToast(result.error, 'error'); }
+    }
+  </script>
+</body>
+</html>

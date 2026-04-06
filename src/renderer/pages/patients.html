@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Muhasoft GestPro - Pacientes</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+  <script src="../js/utils.js"></script>
+  <script>document.write(getSidebarHTML('patients'));</script>
+      <div class="main-content">
+        <div class="main-header">
+          <h1>Pacientes</h1>
+          <div class="header-spacer"></div>
+        </div>
+        <div class="main-body">
+          <div class="toolbar">
+            <div class="search-box">
+              <input type="text" id="searchInput" placeholder="  Pesquisar pacientes...">
+            </div>
+            <div class="ml-auto">
+              <button class="btn btn-primary" onclick="openNewPatient()">+ Novo Paciente</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Codigo</th>
+                      <th>Nome Completo</th>
+                      <th>Telefone</th>
+                      <th>Email</th>
+                      <th>Data Nasc.</th>
+                      <th>Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="patientsTable"></tbody>
+                </table>
+              </div>
+              <div id="emptyState" class="empty-state hidden">
+                <div class="empty-state-icon">&#x1f465;</div>
+                <h3>Sem pacientes</h3>
+                <p>Adicione o primeiro paciente</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <!-- Patient Modal -->
+  <div class="modal-overlay" id="patientModal">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2 id="patientModalTitle">Novo Paciente</h2>
+        <button class="modal-close" onclick="hideModal('patientModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="patientForm">
+          <input type="hidden" id="patientId">
+          <div class="form-section">
+            <h3>Dados Pessoais</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Nome Completo *</label>
+                <input type="text" id="pFullName" class="form-control" required>
+              </div>
+              <div class="form-group">
+                <label>Data de Nascimento</label>
+                <input type="date" id="pBirthDate" class="form-control">
+              </div>
+            </div>
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Genero</label>
+                <select id="pGender" class="form-control">
+                  <option value="">Selecionar</option>
+                  <option value="M">Masculino</option>
+                  <option value="F">Feminino</option>
+                  <option value="Outro">Outro</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>N. Identificacao</label>
+                <input type="text" id="pIdNumber" class="form-control">
+              </div>
+              <div class="form-group">
+                <label>NIF / NUIT</label>
+                <input type="text" id="pTaxNumber" class="form-control">
+              </div>
+            </div>
+          </div>
+          <div class="form-section">
+            <h3>Contactos</h3>
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Telefone</label>
+                <input type="text" id="pPhone" class="form-control">
+              </div>
+              <div class="form-group">
+                <label>Telefone 2</label>
+                <input type="text" id="pPhone2" class="form-control">
+              </div>
+              <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="pEmail" class="form-control">
+              </div>
+            </div>
+          </div>
+          <div class="form-section">
+            <h3>Morada</h3>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Endereco</label>
+                <input type="text" id="pAddress" class="form-control">
+              </div>
+              <div class="form-group">
+                <label>Cidade</label>
+                <input type="text" id="pCity" class="form-control">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Codigo Postal</label>
+                <input type="text" id="pPostalCode" class="form-control">
+              </div>
+              <div class="form-group">
+                <label>Observacoes</label>
+                <textarea id="pNotes" class="form-control" rows="2"></textarea>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="hideModal('patientModal')">Cancelar</button>
+        <button class="btn btn-primary" onclick="savePatient()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let patients = [];
+
+    (async () => {
+      const user = await loadUserInfo();
+      if (!user) return;
+      setupNavigation('patients');
+      await loadPatients();
+    })();
+
+    async function loadPatients(search) {
+      try {
+        patients = await window.api.getPatients(search || '');
+        renderPatients();
+      } catch (e) { showToast('Erro ao carregar pacientes', 'error'); }
+    }
+
+    function renderPatients() {
+      const tbody = document.getElementById('patientsTable');
+      const empty = document.getElementById('emptyState');
+
+      if (!patients || patients.length === 0) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+
+      tbody.innerHTML = patients.map(p => `
+        <tr>
+          <td><strong>${escapeHtml(p.code)}</strong></td>
+          <td>${escapeHtml(p.full_name)}</td>
+          <td>${escapeHtml(p.phone || '-')}</td>
+          <td>${escapeHtml(p.email || '-')}</td>
+          <td>${formatDate(p.birth_date)}</td>
+          <td class="actions">
+            <button class="btn btn-sm btn-secondary" onclick="editPatient(${p.id})" title="Editar">Editar</button>
+            <button class="btn btn-sm btn-danger" onclick="deletePatient(${p.id})" title="Eliminar">Eliminar</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    document.getElementById('searchInput').addEventListener('input', debounce((e) => {
+      loadPatients(e.target.value);
+    }, 300));
+
+    function openNewPatient() {
+      document.getElementById('patientModalTitle').textContent = 'Novo Paciente';
+      document.getElementById('patientForm').reset();
+      document.getElementById('patientId').value = '';
+      showModal('patientModal');
+    }
+
+    async function editPatient(id) {
+      const p = await window.api.getPatient(id);
+      if (!p) return;
+      document.getElementById('patientModalTitle').textContent = 'Editar Paciente';
+      document.getElementById('patientId').value = p.id;
+      document.getElementById('pFullName').value = p.full_name || '';
+      document.getElementById('pBirthDate').value = p.birth_date || '';
+      document.getElementById('pGender').value = p.gender || '';
+      document.getElementById('pIdNumber').value = p.id_number || '';
+      document.getElementById('pTaxNumber').value = p.tax_number || '';
+      document.getElementById('pPhone').value = p.phone || '';
+      document.getElementById('pPhone2').value = p.phone2 || '';
+      document.getElementById('pEmail').value = p.email || '';
+      document.getElementById('pAddress').value = p.address || '';
+      document.getElementById('pCity').value = p.city || '';
+      document.getElementById('pPostalCode').value = p.postal_code || '';
+      document.getElementById('pNotes').value = p.notes || '';
+      showModal('patientModal');
+    }
+
+    async function savePatient() {
+      const id = document.getElementById('patientId').value;
+      const data = {
+        full_name: document.getElementById('pFullName').value,
+        birth_date: document.getElementById('pBirthDate').value || null,
+        gender: document.getElementById('pGender').value || null,
+        id_number: document.getElementById('pIdNumber').value || null,
+        tax_number: document.getElementById('pTaxNumber').value || null,
+        phone: document.getElementById('pPhone').value || null,
+        phone2: document.getElementById('pPhone2').value || null,
+        email: document.getElementById('pEmail').value || null,
+        address: document.getElementById('pAddress').value || null,
+        city: document.getElementById('pCity').value || null,
+        postal_code: document.getElementById('pPostalCode').value || null,
+        notes: document.getElementById('pNotes').value || null
+      };
+
+      if (!data.full_name) { showToast('Nome e obrigatorio', 'error'); return; }
+
+      let result;
+      if (id) {
+        data.id = parseInt(id);
+        result = await window.api.updatePatient(data);
+      } else {
+        result = await window.api.createPatient(data);
+      }
+
+      if (result.success) {
+        showToast(id ? 'Paciente atualizado' : 'Paciente criado');
+        hideModal('patientModal');
+        await loadPatients();
+      } else {
+        showToast(result.error, 'error');
+      }
+    }
+
+    async function deletePatient(id) {
+      if (!confirm('Tem certeza que deseja eliminar este paciente?')) return;
+      const result = await window.api.deletePatient(id);
+      if (result.success) {
+        showToast('Paciente eliminado');
+        await loadPatients();
+      } else {
+        showToast(result.error, 'error');
+      }
+    }
+  </script>
+</body>
+</html>

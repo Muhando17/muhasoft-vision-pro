@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Muhasoft GestPro - Agendamento</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+  <script src="../js/utils.js"></script>
+  <script>document.write(getSidebarHTML('appointments'));</script>
+      <div class="main-content">
+        <div class="main-header">
+          <h1>Agendamento</h1>
+          <div class="header-spacer"></div>
+        </div>
+        <div class="main-body">
+          <div class="toolbar">
+            <div class="filter-group">
+              <label>Data:</label>
+              <input type="date" id="filterDate" class="form-control" style="width:160px;">
+            </div>
+            <div class="filter-group">
+              <label>Estado:</label>
+              <select id="filterStatus" class="form-control" style="width:140px;">
+                <option value="">Todos</option>
+                <option value="agendada">Agendada</option>
+                <option value="confirmada">Confirmada</option>
+                <option value="em_atendimento">Em Atendimento</option>
+                <option value="concluida">Concluida</option>
+                <option value="cancelada">Cancelada</option>
+                <option value="faltou">Faltou</option>
+              </select>
+            </div>
+            <div class="ml-auto">
+              <button class="btn btn-primary" onclick="openNewAppointment()">+ Nova Marcacao</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-body">
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Hora</th>
+                      <th>Paciente</th>
+                      <th>Telefone</th>
+                      <th>Tipo</th>
+                      <th>Profissional</th>
+                      <th>Estado</th>
+                      <th>Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="appointmentsTable"></tbody>
+                </table>
+              </div>
+              <div id="emptyState" class="empty-state hidden">
+                <div class="empty-state-icon">&#x1f4c5;</div>
+                <h3>Sem marcacoes</h3>
+                <p>Adicione uma nova marcacao</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <!-- Appointment Modal -->
+  <div class="modal-overlay" id="appointmentModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="appointmentModalTitle">Nova Marcacao</h2>
+        <button class="modal-close" onclick="hideModal('appointmentModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="appointmentForm">
+          <input type="hidden" id="aptId">
+          <div class="form-group">
+            <label>Paciente *</label>
+            <select id="aptPatient" class="form-control" required></select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Data *</label>
+              <input type="date" id="aptDate" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label>Hora *</label>
+              <input type="time" id="aptTime" class="form-control" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Tipo *</label>
+              <select id="aptType" class="form-control" required>
+                <option value="oftalmologia">Oftalmologia</option>
+                <option value="optometria">Optometria</option>
+                <option value="revisao">Revisao</option>
+                <option value="outro">Outro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Duracao (min)</label>
+              <input type="number" id="aptDuration" class="form-control" value="30" min="15" step="15">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Profissional</label>
+            <select id="aptProfessional" class="form-control"></select>
+          </div>
+          <div class="form-group">
+            <label>Estado</label>
+            <select id="aptStatus" class="form-control">
+              <option value="agendada">Agendada</option>
+              <option value="confirmada">Confirmada</option>
+              <option value="em_atendimento">Em Atendimento</option>
+              <option value="concluida">Concluida</option>
+              <option value="cancelada">Cancelada</option>
+              <option value="faltou">Faltou</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Notas</label>
+            <textarea id="aptNotes" class="form-control" rows="3"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="hideModal('appointmentModal')">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveAppointment()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let appointments = [];
+
+    (async () => {
+      const user = await loadUserInfo();
+      if (!user) return;
+      setupNavigation('appointments');
+      document.getElementById('filterDate').value = today();
+      await loadAppointments();
+    })();
+
+    document.getElementById('filterDate').addEventListener('change', loadAppointments);
+    document.getElementById('filterStatus').addEventListener('change', loadAppointments);
+
+    async function loadAppointments() {
+      try {
+        const filters = {};
+        const date = document.getElementById('filterDate').value;
+        const status = document.getElementById('filterStatus').value;
+        if (date) filters.date = date;
+        if (status) filters.status = status;
+        appointments = await window.api.getAppointments(filters);
+        renderAppointments();
+      } catch (e) { showToast('Erro ao carregar marcacoes', 'error'); }
+    }
+
+    function renderAppointments() {
+      const tbody = document.getElementById('appointmentsTable');
+      const empty = document.getElementById('emptyState');
+      if (!appointments || appointments.length === 0) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+      tbody.innerHTML = appointments.map(a => `
+        <tr>
+          <td>${formatDate(a.appointment_date)}</td>
+          <td><strong>${a.appointment_time}</strong></td>
+          <td>${escapeHtml(a.patient_name)}</td>
+          <td>${escapeHtml(a.patient_phone || '-')}</td>
+          <td>${escapeHtml(a.type)}</td>
+          <td>${escapeHtml(a.professional_name || '-')}</td>
+          <td>${formatStatus(a.status)}</td>
+          <td class="actions">
+            <button class="btn btn-sm btn-secondary" onclick="editAppointment(${a.id})">Editar</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteAppointment(${a.id})">Eliminar</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    async function openNewAppointment() {
+      document.getElementById('appointmentModalTitle').textContent = 'Nova Marcacao';
+      document.getElementById('appointmentForm').reset();
+      document.getElementById('aptId').value = '';
+      document.getElementById('aptDate').value = today();
+      await loadSelectOptions();
+      showModal('appointmentModal');
+    }
+
+    async function loadSelectOptions() {
+      const patients = await window.api.getPatients('');
+      const users = await window.api.getUsers();
+      document.getElementById('aptPatient').innerHTML = '<option value="">Selecionar paciente</option>' +
+        patients.map(p => `<option value="${p.id}">${p.full_name} (${p.code})</option>`).join('');
+      const professionals = users.filter(u => ['oftalmologista', 'optometrista'].includes(u.profile) && u.active);
+      document.getElementById('aptProfessional').innerHTML = '<option value="">Selecionar</option>' +
+        professionals.map(u => `<option value="${u.id}">${u.full_name} - ${formatProfile(u.profile)}</option>`).join('');
+    }
+
+    async function editAppointment(id) {
+      const a = await window.api.getAppointment(id);
+      if (!a) return;
+      await loadSelectOptions();
+      document.getElementById('appointmentModalTitle').textContent = 'Editar Marcacao';
+      document.getElementById('aptId').value = a.id;
+      document.getElementById('aptPatient').value = a.patient_id;
+      document.getElementById('aptDate').value = a.appointment_date;
+      document.getElementById('aptTime').value = a.appointment_time;
+      document.getElementById('aptType').value = a.type;
+      document.getElementById('aptDuration').value = a.duration;
+      document.getElementById('aptProfessional').value = a.professional_id || '';
+      document.getElementById('aptStatus').value = a.status;
+      document.getElementById('aptNotes').value = a.notes || '';
+      showModal('appointmentModal');
+    }
+
+    async function saveAppointment() {
+      const id = document.getElementById('aptId').value;
+      const data = {
+        patient_id: parseInt(document.getElementById('aptPatient').value),
+        appointment_date: document.getElementById('aptDate').value,
+        appointment_time: document.getElementById('aptTime').value,
+        type: document.getElementById('aptType').value,
+        duration: parseInt(document.getElementById('aptDuration').value) || 30,
+        professional_id: document.getElementById('aptProfessional').value ? parseInt(document.getElementById('aptProfessional').value) : null,
+        status: document.getElementById('aptStatus').value,
+        notes: document.getElementById('aptNotes').value || null
+      };
+
+      if (!data.patient_id || !data.appointment_date || !data.appointment_time) {
+        showToast('Preencha os campos obrigatorios', 'error'); return;
+      }
+
+      let result;
+      if (id) { data.id = parseInt(id); result = await window.api.updateAppointment(data); }
+      else { result = await window.api.createAppointment(data); }
+
+      if (result.success) {
+        showToast(id ? 'Marcacao atualizada' : 'Marcacao criada');
+        hideModal('appointmentModal');
+        await loadAppointments();
+      } else { showToast(result.error, 'error'); }
+    }
+
+    async function deleteAppointment(id) {
+      if (!confirm('Eliminar esta marcacao?')) return;
+      const result = await window.api.deleteAppointment(id);
+      if (result.success) { showToast('Marcacao eliminada'); await loadAppointments(); }
+      else { showToast(result.error, 'error'); }
+    }
+  </script>
+</body>
+</html>
